@@ -46,7 +46,11 @@ afterwards.
 .Pp
 Both functions return
 .Dv NULL
-if a memory allocation has failed.
+if a memory allocation has failed or if
+.Fa text
+was
+.Dv NULL
+itself.
 Additionally,
 .Fn yhttp_url_dec
 also returns
