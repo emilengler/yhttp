@@ -26,6 +26,20 @@
 #include "yhttp.h"
 #include "yhttp-internal.h"
 
+struct yhttp *
+yhttp_init(void)
+{
+	struct yhttp	*yh;
+
+	if ((yh = malloc(sizeof(struct yhttp))) == NULL)
+		return (NULL);
+
+	yh->is_dispatched = 0;
+	yh->quit = 0;
+
+	return (yh);
+}
+
 /*
  * The following function is largely based upon kcgi(3)s khttp_urlencode(),
  * and is distributed under the following license:
