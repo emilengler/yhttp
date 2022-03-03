@@ -130,6 +130,9 @@ yhttp_url_dec(const char *s)
 	long	 val;
 	size_t	 i;
 
+	if (s == NULL)
+		return (NULL);
+
 	/* The result cannot be bigger than the original string. */
 	if ((res = malloc(strlen(s) + 1)) == NULL)
 		return (NULL);
