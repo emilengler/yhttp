@@ -40,6 +40,16 @@ yhttp_init(void)
 	return (yh);
 }
 
+void
+yhttp_free(struct yhttp **yh)
+{
+	if (yh == NULL || *yh == NULL)
+		return;
+
+	free(*yh);
+	*yh = NULL;
+}
+
 /*
  * The following function is largely based upon kcgi(3)s khttp_urlencode(),
  * and is distributed under the following license:
