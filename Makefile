@@ -5,7 +5,8 @@ CFLAGS	+= -Wstrict-prototypes -Wwrite-strings -Wno-unused-parameter
 LDFLAGS	+= -L. -lyhttp
 
 OBJS	 = yhttp.o
-REGRESS	 = regress/test-url_enc
+REGRESS	 = regress/test-url_enc	\
+	   regress/test-url_dec
 
 all: libyhttp.a
 

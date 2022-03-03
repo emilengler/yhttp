@@ -16,6 +16,7 @@
 
 #include <sys/types.h>
 
+#include <assert.h>
 #include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -83,7 +84,7 @@ yhttp_url_enc(const char *s)
 			continue;
 		}
 
-		/* Convert octet to percent-encoded sequence. */
+		/* Convert byte to percent-encoded sequence. */
 		rc = snprintf(res + i, 4, "%%%.2hhX", (unsigned char)ch);
 		if (rc != 3) {
 			free(res);
@@ -94,4 +95,56 @@ yhttp_url_enc(const char *s)
 	res[i] = '\0';
 
 	return (res);
+}
+
+char *
+yhttp_url_dec(const char *s)
+{
+	char	*res;
+	char	 tmp[3];
+	char	 ch;
+	long	 val;
+	size_t	 i;
+
+	/* The result cannot be bigger than the original string. */
+	if ((res = malloc(strlen(s) + 1)) == NULL)
+		return (NULL);
+
+	i = 0;
+	while ((ch = *s) != '\0') {
+		if (ch == '%') {
+			/*
+			 * Check if this is actually a valid and legal
+			 * percent-encoded sequence, by checking if the
+			 * following two bytes are valid hexadecimal
+			 * characters.
+			 */
+			if (!isxdigit(s[1]) || !isxdigit(s[2]))
+				goto err;
+
+			/* Convert the ASCII chars into an integer. */
+			strlcpy(tmp, s + 1, sizeof(tmp));
+			val = strtol(tmp, NULL, 16);
+			assert(val >= 0x0 && val <= 0xFF);
+
+			/* %00 is forbidden for security reasons. */
+			if (val == 0)
+				goto err;
+
+			/* Append it to the result. */
+			res[i++] = val;
+			s += 3;
+			continue;
+		} else if (ch == '+')
+			res[i++] = ' ';
+		else
+			res[i++] = ch;
+		++s;
+	}
+	res[i] = '\0';
+
+	return (res);
+err:
+	free(res);
+	return (NULL);
 }
