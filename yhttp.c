@@ -53,7 +53,7 @@ yhttp_url_enc(const char *s)
 	int	 rc;
 
 	if (s == NULL)
-		return (strdup(""));	/* Return empty allocated string. */
+		return (NULL);
 
 	/*
 	 * In the worst case, the resulting string will be three times larger
