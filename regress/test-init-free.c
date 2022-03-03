@@ -35,5 +35,12 @@ main(int argc, char *argv[])
 		errx(1, "yhttp_init: have is_dispatched %d, want 0", yh->is_dispatched);
 	if (yh->quit != 0)
 		errx(1, "yhttp_init: have quit %d, want 0", yh->quit);
+
+	yhttp_free(&yh);
+	if (yh != NULL)
+		errx(1, "yhttp_free: have value, want NULL");
+	yhttp_free(&yh);
+	yhttp_free(NULL);
+
 	return (0);
 }
