@@ -66,4 +66,6 @@ main(int argc, char *argv[])
 			errx(1, "yhttp_url_enc: have %s, want %s", enc, t->output);
 		free(enc);
 	}
+
+	return (0);
 }
