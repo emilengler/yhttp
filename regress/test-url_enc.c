@@ -59,6 +59,9 @@ main(int argc, char *argv[])
 	const struct test	*t;
 	char			*enc;
 
+	if (yhttp_url_enc(NULL) != NULL)
+		errx(1, "yhttp_url_enc: passed NULL, have value");
+
 	for (t = tests; t->input != NULL; ++t) {
 		if ((enc = yhttp_url_enc(t->input)) == NULL)
 			err(1, "yhttp_url_enc");

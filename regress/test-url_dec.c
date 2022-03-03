@@ -71,6 +71,9 @@ main(int argc, char *argv[])
 	const struct test	*t;
 	char			*dec;
 
+	if (yhttp_url_dec(NULL) != NULL)
+		errx(1, "yhttp_url_dec: passed NULL, have value");
+
 	for (t = tests; t->input != NULL; ++t) {
 		dec = yhttp_url_dec(t->input);
 		if (dec == NULL && t->output != NULL)
