@@ -1,0 +1,163 @@
+.\" Copyright (c) 2022 Emil Engler <engler+epitaph@unveil2.org>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd March 3, 2022
+.Dt YHTTP 3
+.Os
+.Sh NAME
+.Nm yhttp
+.Nd minimal HTTP server library
+.Sh LIBRARY
+.Lb libyhttp
+.Sh SYNOPSIS
+.In sys/types.h
+.Sh DESCRIPTION
+The
+.Nm yhttp
+library offers a quick but elegant way to setup an HTTP/1.1 server.
+Interfacing applications generally work as follows:
+.Bl -enum
+.It
+Create the
+.Vt "struct yhttp *"
+instance by calling
+.Xr yhttp_init 3 .
+.It
+Call
+.Xr yhttp_dispatch 3
+with the just created
+.Vt "struct yhttp *" ,
+the callback function to be executed, whenever a valid request passes through,
+and a
+.Vt "void *"
+being an argument of the previous callback function.
+.It
+Eventually stop the execution of
+.Xr yhttp_dispatch 3
+by calling
+.Xr yhttp_stop 3 .
+.It
+Clean-up the resources by passing the
+.Vt "struct yhttp *"
+to
+.Xr yhttp_free 3
+and eventually exit the application.
+.El
+.Ss Pledge Promises
+The
+.Nm yhttp
+library is built to operate in security-sensitive environments, including
+.Xr pledge 2
+on
+.Ox .
+The following is a list of all required promises.
+.Bl -tag -width Ds
+.It Va stdio
+Required by essentially al
+.Nm
+functions.
+.It Va inet
+Required by
+.Xr yhttp_dispatch 3 .
+.El
+.Sh EXAMPLES
+The following sets up an HTTP/1.1 server, that replies with a quote from
+.Dq The Beatles
+in the Content-Type
+.Qq text/plain .
+.Bd -literal -offset indent
+#include <sys/types.h>
+
+#include <err.h>
+#include <signal.h>
+#include <string.h>
+
+#include <yhttp.h>
+
+static void	cb(struct yhttp_requ *, void *);
+static void	sighdlr(int);
+
+static struct yhttp	*yh;
+
+static void
+cb(struct yhttp_requ *requ, void *unused)
+{
+	const char	*resp;
+
+	resp = "Love has a nasty habit of disappearing overnight";
+
+	/* Not required, because 200 is the default status code anyway. */
+	yhttp_requ_status(requ, 200);
+	yhttp_requ_header(requ, "Content-Type", "text/plain");
+	yhttp_requ_body(requ, resp, strlen(resp));
+}
+
+static void
+sighdlr(int sig)
+{
+	if (yhttp_stop(yh) != YHTTP_OK)
+		errx(1, "yhttp_stop");
+}
+
+int
+main(void)
+{
+	/* Setup the signal handlers for clean termination. */
+	signal(SIGINT, sighdlr);
+	signal(SIGTERM, sighdlr);
+
+	/* Create the yhttp instance. */
+	if ((yh = yhttp_init()) == NULL)
+		errx(1, "yhttp_init");
+
+	/* Run the actual HTTP server. */
+	if (yhttp_dispatch(yh, cb, NULL) != YHTTP_OK)
+		errx(1, "yhttp_dispatch");
+
+	/* Clean the resources up and exit the application. */
+	yhttp_free(&yp);
+	return (0);
+}
+.Ed
+.Sh SEE ALSO
+.Xr yhttp_dispatch 3 ,
+.Xr yhttp_header 3 ,
+.Xr yhttp_init 3 ,
+.Xr yhttp_resp_status 3 ,
+.Xr yhttp_url_enc 3
+.Sh STANDARDS
+Many standards are involved in the
+.Nm
+library, most significantly being RFC 7320
+.Dq Hypertext Transfer Protocol (HTTP/1.1): Message Syntax and Routing .
+.Sh AUTHORS
+The
+.Nm
+library was written by
+.An Emil Engler Aq Mt engler+yhttp@unveil2.org .
+.Sh BUGS
+Yes.
+.Sh SECURITY CONSIDERATIONS
+A TLS implementation is not being provided on purpose.
+If you demand to use HTTPS, please tunnel the connections over a tool such
+as
+.Xr stunnel 8
+or
+.Xr relayd 8 .
+.Pp
+It is strongly advised to run yhttp in a sandbox, such as
+.Xr pledge 2
+on
+.Ox ,
+due to the fact of being a network facing application.

@@ -1,0 +1,57 @@
+.\" Copyright (c) 2022 Emil Engler <engler+epitaph@unveil2.org>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd March 3, 2022
+.Dt YHTTP_INIT 3
+.Os
+.Sh NAME
+.Nm yhttp_init ,
+.Nm yhttp_free
+.Nd initialize and free a yhttp instance
+.Sh LIBRARY
+.Lb libyhttp
+.Sh SYNOPSIS
+.In sys/types.h
+.In yhttp.h
+.Ft "struct yhttp *"
+.Fo yhttp_init
+.Fa void
+.Fc
+.Ft void
+.Fo yhttp_free
+.Fa "struct yhttp **yh"
+.Fc
+.Sh DESCRIPTION
+.Fn yhttp_init
+initializes a new yhttp instance, which is necessary for most other function
+calls.
+.Pp
+.Fn yhttp_free
+cleans-up
+.Fa yh ,
+which was created by
+.Fn yhttp_init ,
+and sets its value to
+.Dv NULL .
+Passing
+.Dv NULL
+to this function will result in no operation.
+.Sh RETURN VALUES
+.Fn yhttp_init
+returns a pointer to the allocated yhttp instance or
+.Dv NULL
+in case of a failure, which is most likely due to a failed memory allocation.
+.Sh AUTHORS
+Written by
+.An Emil Engler Aq Mt engler+yhttp@unveil2.org .

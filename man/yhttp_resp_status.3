@@ -1,0 +1,104 @@
+.\" Copyright (c) 2022 Emil Engler <engler+epitaph@unveil2.org>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd March 3, 2022
+.Dt YHTTP_RESP_STATUS 3
+.Os
+.Sh NAME
+.Nm yhttp_resp_status ,
+.Nm yhttp_resp_header ,
+.Nm yhttp_resp_body
+.Nd prepare the response to an HTTP request
+.Sh LIBRARY
+.Lb libyhttp
+.Sh SYNOPSIS
+.In sys/types.h
+.In yhttp.h
+.Ft int
+.Fo yhttp_resp_status
+.Fa "struct yhttp *yh"
+.Fa "int status"
+.Fc
+.Ft int
+.Fo yhttp_resp_header
+.Fa "struct yhttp *yh"
+.Fa "const char *name"
+.Fa "const char *value"
+.Fc
+.Ft int
+.Fo yhttp_resp_body
+.Fa "struct yhttp *yh"
+.Fa "const unsigned char *body"
+.Fa "size_t nbody"
+.Fc
+.Sh DESCRIPTION
+These functions prepare the response to an HTTP request, which will get
+dispatched, once the callback function returns.
+.Pp
+All values passed to these functions are being deep-copied, including strings,
+meaning that the caller is not required to keep its copy around.
+.Pp
+.Fn yhttp_resp_status
+will set the HTTP status code of the response to
+.Fa status .
+.Fa status
+must be between
+.Qq 100
+and
+.Qq 999 .
+By default, the status code
+.Qq 200
+is going to be used.
+.Pp
+.Fn yhttp_resp_header
+sets the header field
+.Fa name
+to
+.Fa value .
+Passing
+.Dv NULL
+as the value will unset the header field.
+Keep in mind, that certain header fields, most notably those involved in
+the transfer, should not be set by the caller, such as
+.Qq Content-Length
+or
+.Qq Transfer-Encoding .
+.Pp
+.Fn yhttp_resp_body
+sets the message body of the response to
+.Fa body .
+Because
+.Fa body
+may contain binary data, the caller is required to provide its length through
+.Fa nbody .
+By default, no message body is being used.
+.Sh RETURN VALUES
+The functions return an integer indicating the error state.
+.Bl -tag -width -Ds
+.It Dv YHTTP_OK
+Success (not an error).
+.It Dv YHTTP_ERRNO
+Low-level operating system failure.
+See
+.Xr errno 2
+for details.
+.It Dv YHTTP_EINVAL
+Invalid arguments supplied.
+.El
+.Sh AUTHORS
+Written by
+.An Emil Engler Aq Mt engler+yhttp@unveil2.org .
+.Sh CAVEATS
+Using these functions outside of a callback function will result in undefined
+behavior.

@@ -1,0 +1,66 @@
+.\" Copyright (c) 2022 Emil Engler <engler+epitaph@unveil2.org>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.Dd March 3, 2022
+.Dt YHTTP_URL_ENC 3
+.Os
+.Sh NAME
+.Nm yhttp_url_enc ,
+.Nm yhttp_url_dec
+.Nd encode and decode a string into URL encoding
+.Sh LIBRARY
+.Lb libyhttp
+.Sh SYNOPSIS
+.In sys/types.h
+.In yhttp.h
+.Ft "char *"
+.Fo yhttp_url_enc
+.Fa "const char *text"
+.Fc
+.Ft "char *"
+.Fo yhttp_url_dec
+.Fa "const char *text"
+.Fc
+.Sh DESCRIPTION
+Encode/Decode
+.Fa text
+into its URL encoded/decoded pedant.
+.Sh RETURN VALUES
+Returns an allocated string that contains the encoded/decoded version of
+.Fa text .
+Because the string is allocated, it is the callers responsibility to pass it
+to
+.Xr free 3
+afterwards.
+.Pp
+Both functions return
+.Dv NULL
+if a memory allocation has failed.
+Additionally,
+.Fn yhttp_url_dec
+also returns
+.Dv NULL
+if
+.Fa text
+contains malformatted percent-encoded sequences.
+.Sh AUTHORS
+Written by
+.An Emil Engler Aq Mt engler+yhttp@unveil2.org .
+.Sh CAVEATS
+For security reasons, the sequence
+.Qq %00
+is considered malformatted and will cause
+.Fn yhttp_url_dec
+to return
+.Dv NULL .
