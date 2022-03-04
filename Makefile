@@ -4,7 +4,8 @@ CFLAGS	+= -std=c99 -g -W -Wall -Wextra -Wpedantic -Wmissing-prototypes
 CFLAGS	+= -Wstrict-prototypes -Wwrite-strings -Wno-unused-parameter
 LDFLAGS	+= -L. -lyhttp
 
-OBJS	 = yhttp.o
+OBJS	 = yhttp.o	\
+	   hash.o
 REGRESS	 = regress/test-init-free	\
 	   regress/test-url_enc		\
 	   regress/test-url_dec
