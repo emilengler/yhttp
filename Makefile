@@ -8,7 +8,8 @@ OBJS	 = yhttp.o	\
 	   hash.o
 REGRESS	 = regress/test-init-free	\
 	   regress/test-url_enc		\
-	   regress/test-url_dec
+	   regress/test-url_dec		\
+	   regress/test-hash
 
 all: libyhttp.a
 
