@@ -81,6 +81,8 @@ hash_free(struct hash *ht[])
 			free(tmp);
 		}
 	}
+
+	free(ht);
 }
 
 struct hash *
