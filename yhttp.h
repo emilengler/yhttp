@@ -21,7 +21,8 @@ enum yhttp_err {
 	YHTTP_ERRNO = -1,
 	YHTTP_OK = 0,
 	YHTTP_ENOENT,
-	YHTTP_EINVAL
+	YHTTP_EINVAL,
+	YHTTP_EOVERFLOW
 };
 
 enum yhttp_method {

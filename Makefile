@@ -5,11 +5,13 @@ CFLAGS	+= -Wstrict-prototypes -Wwrite-strings -Wno-unused-parameter
 LDFLAGS	+= -L. -lyhttp
 
 OBJS	 = yhttp.o	\
-	   hash.o
+	   hash.o	\
+	   buf.o
 REGRESS	 = regress/test-init-free	\
 	   regress/test-url_enc		\
 	   regress/test-url_dec		\
-	   regress/test-hash
+	   regress/test-hash		\
+	   regress/test-buf
 
 all: libyhttp.a
 
