@@ -19,8 +19,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "yhttp.h"
 #include "hash.h"
+#include "yhttp.h"
 
 #define NHASH	128
 
