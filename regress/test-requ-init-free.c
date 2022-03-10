@@ -21,11 +21,14 @@
 
 #include "../yhttp.h"
 #include "../yhttp-internal.h"
+#include "../hash.c"
 
 int
 main(int argc, char *argv[])
 {
-	struct yhttp_requ	*requ;
+	struct yhttp_requ_internal	*internal;
+	struct yhttp_requ		*requ;
+	size_t				 i;
 
 	if ((requ = yhttp_requ_init()) == NULL)
 		err(1, "yhttp_requ_init");
@@ -40,8 +43,19 @@ main(int argc, char *argv[])
 		errx(1, "yhttp_requ_init: requ->nbody is not 0");
 	if (requ->method != YHTTP_GET)
 		errx(1, "yhttp_requ_init: requ->method is not YHTTP_GET");
-	if (requ->internal != NULL)
-		errx(1, "yhttp_requ_init: requ->internal is not NULL");
+
+	internal = requ->internal;
+	if (internal == NULL)
+		errx(1, "yhttp_requ_init: requ->internal is NULL");
+	if (internal->header == NULL)
+		errx(1, "yhttp_requ_init: internal->header is NULL");
+	if (internal->query == NULL)
+		errx(1, "yhttp_requ_init: internal->query is NULL");
+
+	for (i = 0; i < NHASH; ++i) {
+		if (internal->header[i] != NULL || internal->query[i])
+			errx(1, "yhttp_requ_init: hash_init()");
+	}
 
 	yhttp_requ_free(requ);
 

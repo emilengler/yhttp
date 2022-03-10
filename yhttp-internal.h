@@ -25,6 +25,11 @@ struct yhttp {
 	int	quit;		/* yhttp_stop() sets this to true. */
 };
 
+struct yhttp_requ_internal {
+	struct hash	**header;	/* Header fields. */
+	struct hash	**query;	/* Query fields. */
+};
+
 struct yhttp_requ	*yhttp_requ_init(void);
 void			 yhttp_requ_free(struct yhttp_requ *);
 

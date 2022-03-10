@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "hash.h"
 #include "yhttp.h"
 #include "yhttp-internal.h"
 
@@ -53,7 +54,8 @@ yhttp_free(struct yhttp **yh)
 struct yhttp_requ *
 yhttp_requ_init(void)
 {
-	struct yhttp_requ	*requ;
+	struct yhttp_requ_internal	*internal;
+	struct yhttp_requ		*requ;
 
 	if ((requ = malloc(sizeof(struct yhttp_requ))) == NULL)
 		return (NULL);
@@ -63,7 +65,26 @@ yhttp_requ_init(void)
 	requ->body = NULL;
 	requ->nbody = 0;
 	requ->method = YHTTP_GET;
-	requ->internal = NULL;
+
+	/* Initialize the internal field. */
+	/* TODO: Refactor this mess with a nice goto err statement. */
+	if ((internal = malloc(sizeof(struct yhttp_requ_internal))) == NULL) {
+		free(requ);
+		return (NULL);
+	}
+	requ->internal = internal;
+
+	if ((internal->header = hash_init()) == NULL) {
+		free(requ);
+		free(internal);
+		return (NULL);
+	}
+	if ((internal->query = hash_init()) == NULL) {
+		free(requ);
+		free(internal);
+		hash_free(internal->header);
+		return (NULL);
+	}
 
 	return (requ);
 }
@@ -71,10 +92,18 @@ yhttp_requ_init(void)
 void
 yhttp_requ_free(struct yhttp_requ *requ)
 {
+	struct yhttp_requ_internal	*internal;
+
+	internal = requ->internal;
+
 	free(requ->path);
 	free(requ->client_ip);
 	free(requ->body);
 	free(requ);
+
+	hash_free(internal->header);
+	hash_free(internal->query);
+	free(internal);
 }
 
 /*
