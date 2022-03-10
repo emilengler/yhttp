@@ -8,6 +8,7 @@ OBJS	 = yhttp.o	\
 	   hash.o	\
 	   buf.o
 REGRESS	 = regress/test-init-free	\
+	   regress/test-requ-init-free	\
 	   regress/test-url_enc		\
 	   regress/test-url_dec		\
 	   regress/test-hash		\

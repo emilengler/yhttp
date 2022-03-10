@@ -14,18 +14,36 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef YHTTP_INTERNAL_H
-#define YHTTP_INTERNAL_H
+#include <sys/types.h>
 
-/* TODO: The port MUST be changable by the application. */
-#define PORT	8080
+#include <err.h>
+#include <stdlib.h>
 
-struct yhttp {
-	int	is_dispatched;	/* yhttp_dispatch() is running. */
-	int	quit;		/* yhttp_stop() sets this to true. */
-};
+#include "../yhttp.h"
+#include "../yhttp-internal.h"
 
-struct yhttp_requ	*yhttp_requ_init(void);
-void			 yhttp_requ_free(struct yhttp_requ *);
+int
+main(int argc, char *argv[])
+{
+	struct yhttp_requ	*requ;
 
-#endif
+	if ((requ = yhttp_requ_init()) == NULL)
+		err(1, "yhttp_requ_init");
+
+	if (requ->path != NULL)
+		errx(1, "yhttp_requ_init: requ->path is not NULL");
+	if (requ->client_ip != NULL)
+		errx(1, "yhttp_requ_init: requ->client_ip is not NULL");
+	if (requ->body != NULL)
+		errx(1, "yhttp_requ_init: requ->body is not NULL");
+	if (requ->nbody != 0)
+		errx(1, "yhttp_requ_init: requ->nbody is not 0");
+	if (requ->method != YHTTP_GET)
+		errx(1, "yhttp_requ_init: requ->method is not YHTTP_GET");
+	if (requ->internal != NULL)
+		errx(1, "yhttp_requ_init: requ->internal is not NULL");
+
+	yhttp_requ_free(requ);
+
+	return (0);
+}

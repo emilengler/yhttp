@@ -50,6 +50,33 @@ yhttp_free(struct yhttp **yh)
 	*yh = NULL;
 }
 
+struct yhttp_requ *
+yhttp_requ_init(void)
+{
+	struct yhttp_requ	*requ;
+
+	if ((requ = malloc(sizeof(struct yhttp_requ))) == NULL)
+		return (NULL);
+
+	requ->path = NULL;
+	requ->client_ip = NULL;
+	requ->body = NULL;
+	requ->nbody = 0;
+	requ->method = YHTTP_GET;
+	requ->internal = NULL;
+
+	return (requ);
+}
+
+void
+yhttp_requ_free(struct yhttp_requ *requ)
+{
+	free(requ->path);
+	free(requ->client_ip);
+	free(requ->body);
+	free(requ);
+}
+
 /*
  * The following function is largely based upon kcgi(3)s khttp_urlencode(),
  * and is distributed under the following license:
