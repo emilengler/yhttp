@@ -67,26 +67,27 @@ yhttp_requ_init(void)
 	requ->method = YHTTP_GET;
 
 	/* Initialize the internal field. */
-	/* TODO: Refactor this mess with a nice goto err statement. */
-	if ((internal = malloc(sizeof(struct yhttp_requ_internal))) == NULL) {
-		free(requ);
-		return (NULL);
-	}
+	if ((internal = malloc(sizeof(struct yhttp_requ_internal))) == NULL)
+		goto err;
 	requ->internal = internal;
 
-	if ((internal->header = hash_init()) == NULL) {
-		free(requ);
-		free(internal);
-		return (NULL);
-	}
-	if ((internal->query = hash_init()) == NULL) {
-		free(requ);
-		free(internal);
-		hash_free(internal->header);
-		return (NULL);
-	}
+	internal->header = NULL;
+	internal->query = NULL;
+
+	if ((internal->header = hash_init()) == NULL)
+		goto err;
+	if ((internal->query = hash_init()) == NULL)
+		goto err;
 
 	return (requ);
+err:
+	free(requ);
+	if (internal != NULL) {
+		hash_free(internal->header);
+		hash_free(internal->query);
+		free(internal);
+	}
+	return (NULL);
 }
 
 void
