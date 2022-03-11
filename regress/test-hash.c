@@ -229,5 +229,6 @@ main(int argc, char *argv[])
 	test_hash_init();
 	test_hash_set();
 	test_hash_unset();
+	hash_free(NULL);
 	return (0);
 }

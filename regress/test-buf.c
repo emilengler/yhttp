@@ -55,6 +55,8 @@ test_buf_wipe(void)
 		errx(1, "buf_wipe: buf.nbuf is not 0");
 	if (buf.used != 0)
 		errx(1, "buf_wipe: buf.used is not 0");
+
+	buf_wipe(NULL);
 }
 
 static void

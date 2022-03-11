@@ -74,6 +74,9 @@ buf_init(struct buf *buf)
 void
 buf_wipe(struct buf *buf)
 {
+	if (buf == NULL)
+		return;
+
 	free(buf->buf);
 	buf_init(buf);
 }

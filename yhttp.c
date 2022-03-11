@@ -94,6 +94,9 @@ yhttp_requ_free(struct yhttp_requ *requ)
 {
 	struct yhttp_requ_internal	*internal;
 
+	if (requ == NULL)
+		return;
+
 	internal = requ->internal;
 
 	free(requ->path);

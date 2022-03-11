@@ -58,6 +58,7 @@ main(int argc, char *argv[])
 	}
 
 	yhttp_requ_free(requ);
+	yhttp_requ_free(NULL);
 
 	return (0);
 }

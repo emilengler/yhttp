@@ -70,6 +70,9 @@ hash_free(struct hash *ht[])
 	struct hash	*tmp;
 	size_t		 i;
 
+	if (ht == NULL)
+		return;
+
 	/* Free all linked lists inside the hash table array. */
 	for (i = 0; i < NHASH; ++i) {
 		while (ht[i] != NULL) {
