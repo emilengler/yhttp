@@ -6,13 +6,15 @@ LDFLAGS	+= -L. -lyhttp
 
 OBJS	 = yhttp.o	\
 	   hash.o	\
-	   buf.o
-REGRESS	 = regress/test-init-free	\
-	   regress/test-requ-init-free	\
-	   regress/test-url_enc		\
-	   regress/test-url_dec		\
-	   regress/test-hash		\
-	   regress/test-buf
+	   buf.o	\
+	   parser.o
+REGRESS	 = regress/test-init-free		\
+	   regress/test-requ-init-free		\
+	   regress/test-url_enc			\
+	   regress/test-url_dec			\
+	   regress/test-hash			\
+	   regress/test-buf			\
+	   regress/test-parser-init-free
 
 all: libyhttp.a
 
