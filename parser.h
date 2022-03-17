@@ -34,4 +34,6 @@ struct parser {
 struct parser	*parser_init(void);
 void		 parser_free(struct parser *);
 
+int		 parser_parse(struct parser *, const unsigned char *, size_t);
+
 #endif
