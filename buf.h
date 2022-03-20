@@ -27,5 +27,6 @@ void	buf_init(struct buf *);
 void	buf_wipe(struct buf *);
 
 int	buf_append(struct buf *, const unsigned char *, size_t);
+int	buf_copy(struct buf *, const struct buf *);
 
 #endif

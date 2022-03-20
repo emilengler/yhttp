@@ -27,6 +27,7 @@
 static void	test_buf_init(void);
 static void	test_buf_wipe(void);
 static void	test_buf_append(void);
+static void	test_buf_copy(void);
 
 static void
 test_buf_init(void)
@@ -119,11 +120,40 @@ test_buf_append(void)
 	buf_wipe(&buf);
 }
 
+static void
+test_buf_copy(void)
+{
+	unsigned char	data[8192];
+	struct buf	orig, copy;
+
+	arc4random_buf(data, 8192);
+
+	buf_init(&orig);
+	if (buf_append(&orig, data, sizeof(data)) != YHTTP_OK)
+		err(1, "buf_append");
+
+	if (buf_copy(&copy, &orig) != YHTTP_OK)
+		err(1, "buf_copy");
+
+	if (orig.buf == copy.buf)
+		errx(1, "buf_copy: orig.buf is copy.buf (no deep copy)");
+	if (orig.nbuf != copy.nbuf)
+		errx(1, "buf_copy: orig.nbuf is not copy.nbuf");
+	if (orig.used != copy.used)
+		errx(1, "buf_copy: orig.used is not copy.used");
+	if (memcmp(orig.buf, copy.buf, sizeof(data)) != 0)
+		errx(1, "buf_copy: copy.buf is no deep copy of orig.buf");
+
+	buf_wipe(&orig);
+	buf_wipe(&copy);
+}
+
 int
 main(int argc, char *argv[])
 {
 	test_buf_init();
 	test_buf_wipe();
 	test_buf_append();
+	test_buf_copy();
 	return (0);
 }
