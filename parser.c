@@ -16,6 +16,7 @@
 
 #include <sys/types.h>
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -24,24 +25,24 @@
 #include "yhttp.h"
 #include "yhttp-internal.h"
 
-static int	parser_rline(struct parser *, const unsigned char *, size_t);
-static int	parser_headers(struct parser *, const unsigned char *, size_t);
-static int	parser_body(struct parser *, const unsigned char *, size_t);
+static int	parser_rline(struct parser *);
+static int	parser_headers(struct parser *);
+static int	parser_body(struct parser *);
 
 static int
-parser_rline(struct parser *parser, const unsigned char *data, size_t ndata)
+parser_rline(struct parser *parser)
 {
 	return (YHTTP_OK);
 }
 
 static int
-parser_headers(struct parser *parser, const unsigned char *data, size_t ndata)
+parser_headers(struct parser *parser)
 {
 	return (YHTTP_OK);
 }
 
 static int
-parser_body(struct parser *parser, const unsigned char *data, size_t ndata)
+parser_body(struct parser *parser)
 {
 	return (YHTTP_OK);
 }
@@ -80,15 +81,28 @@ parser_free(struct parser *parser)
 int
 parser_parse(struct parser *parser, const unsigned char *data, size_t ndata)
 {
+	int	rc;
+
+	/*
+	 * Every new TCP message is being added to the buffer first.
+	 * Afterwards, the appropriate state function (rline, headers, body)
+	 * looks for its ending character inside the buffer.
+	 * If it has been found, the buffer is wiped up until that ending
+	 * character with this wiped content being parsed.  Otherwise, it just
+	 * returns.
+	 */
+	if ((rc = buf_append(&parser->buf, data, ndata)) != YHTTP_OK)
+		return (rc);
+
 	switch (parser->state) {
 	case PARSER_RLINE:
-		return (parser_rline(parser, data, ndata));
+		return (parser_rline(parser));
 	case PARSER_HEADERS:
-		return (parser_headers(parser, data, ndata));
+		return (parser_headers(parser));
 	case PARSER_BODY:
-		return (parser_body(parser, data, ndata));
+		return (parser_body(parser));
 	default:
-		return (YHTTP_EINVAL);
+		assert(0);
 	}
 
 	return (YHTTP_OK);
