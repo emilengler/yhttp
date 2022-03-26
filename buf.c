@@ -99,7 +99,7 @@ int
 buf_copy(struct buf *dst, const struct buf *src)
 {
 	if ((dst->buf = malloc(src->nbuf)) == NULL)
-		return (-1);
+		return (YHTTP_ERRNO);
 	memcpy(dst->buf, src->buf, src->used);
 
 	dst->nbuf = src->nbuf;
