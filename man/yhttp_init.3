@@ -23,10 +23,11 @@
 .Lb libyhttp
 .Sh SYNOPSIS
 .In sys/types.h
+.In stdint.h
 .In yhttp.h
 .Ft "struct yhttp *"
 .Fo yhttp_init
-.Fa void
+.Fa "uint16_t port"
 .Fc
 .Ft void
 .Fo yhttp_free
@@ -34,8 +35,14 @@
 .Fc
 .Sh DESCRIPTION
 .Fn yhttp_init
-initializes a new yhttp instance, which is necessary for most other function
-calls.
+initializes a new yhttp instance for a specific TCP
+.Fa port ,
+which is necessary for most other function calls.
+Passing a value below 1024 to
+.Fa port
+is forbidden and will result in
+.Dv NULL
+being returned.
 .Pp
 .Fn yhttp_free
 cleans-up
@@ -51,7 +58,10 @@ to this function will result in no operation.
 .Fn yhttp_init
 returns a pointer to the allocated yhttp instance or
 .Dv NULL
-in case of a failure, which is most likely due to a failed memory allocation.
+in case of a failure, which is most likely due to a failed memory allocation
+or
+.Fa port
+being below 1024.
 .Sh AUTHORS
 Written by
 .An Emil Engler Aq Mt engler+yhttp@unveil2.org .

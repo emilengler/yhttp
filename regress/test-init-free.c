@@ -17,6 +17,7 @@
 #include <sys/types.h>
 
 #include <err.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 #include "../yhttp.h"
@@ -26,14 +27,22 @@ int
 main(int argc, char *argv[])
 {
 	struct yhttp	*yh;
+	uint16_t	 i;
 
-	if ((yh = yhttp_init()) == NULL)
+	for (i = 0; i < 1024; ++i) {
+		if (yhttp_init(i) != NULL)
+			errx(1, "yhttp_init: can use port %d", i);
+	}
+
+	if ((yh = yhttp_init(8080)) == NULL)
 		err(1, "yhttp_init");
 
 	if (yh->is_dispatched != 0)
 		errx(1, "yhttp_init: have is_dispatched %d, want 0", yh->is_dispatched);
 	if (yh->quit != 0)
 		errx(1, "yhttp_init: have quit %d, want 0", yh->quit);
+	if (yh->port != 8080)
+		errx(1, "yhttp_init: have port %d, want 8080", yh->port);
 
 	yhttp_free(&yh);
 	if (yh != NULL)

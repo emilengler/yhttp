@@ -28,15 +28,24 @@
 #include "yhttp-internal.h"
 
 struct yhttp *
-yhttp_init(void)
+yhttp_init(uint16_t port)
 {
 	struct yhttp	*yh;
+
+	/*
+	 * Running on a well-known port requires running with root privileges,
+	 * which is strongly discouraged.  Therefore, only ports outside of
+	 * the well-known range are permitted for usage.
+	 */
+	if (port < 1024)
+		return (NULL);
 
 	if ((yh = malloc(sizeof(struct yhttp))) == NULL)
 		return (NULL);
 
 	yh->is_dispatched = 0;
 	yh->quit = 0;
+	yh->port = port;
 
 	return (yh);
 }

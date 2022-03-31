@@ -22,6 +22,7 @@
 .Lb libyhttp
 .Sh SYNOPSIS
 .In sys/types.h
+.In stdint.h
 .In yhttp.h
 .Sh DESCRIPTION
 The
@@ -73,7 +74,8 @@ Required by
 .Xr yhttp_dispatch 3 .
 .El
 .Sh EXAMPLES
-The following sets up an HTTP/1.1 server, that replies with a quote from
+The following sets up an HTTP/1.1 server on TCP port 8080, that replies with
+a quote from
 .Dq The Beatles
 in the Content-Type
 .Qq text/plain .
@@ -82,6 +84,7 @@ in the Content-Type
 
 #include <err.h>
 #include <signal.h>
+#include <stdint.h>
 #include <string.h>
 
 #include <yhttp.h>
@@ -119,7 +122,7 @@ main(void)
 	signal(SIGTERM, sighdlr);
 
 	/* Create the yhttp instance. */
-	if ((yh = yhttp_init()) == NULL)
+	if ((yh = yhttp_init(8080)) == NULL)
 		errx(1, "yhttp_init");
 
 	/* Run the actual HTTP server. */
@@ -150,6 +153,12 @@ library was written by
 .Sh BUGS
 Yes.
 .Sh SECURITY CONSIDERATIONS
+The usage of TCP ports below 1024 is forbidden, because it would require root
+privileges, which is discouraged.
+If you demand to use such a port, consider redirecting the traffic through
+another tool, such as
+.Xr pf 4 .
+.Pp
 A TLS implementation is not being provided on purpose.
 If you demand to use HTTPS, please tunnel the connections over a tool such
 as

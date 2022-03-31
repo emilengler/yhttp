@@ -44,7 +44,7 @@ struct yhttp_requ {
 	void			*internal;
 };
 
-struct yhttp	*yhttp_init(void);
+struct yhttp	*yhttp_init(uint16_t);
 void		 yhttp_free(struct yhttp **);
 
 char		*yhttp_header(struct yhttp_requ *, const char *);
