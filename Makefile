@@ -7,7 +7,8 @@ LDFLAGS	+= -L. -lyhttp
 OBJS	 = yhttp.o	\
 	   hash.o	\
 	   buf.o	\
-	   parser.o
+	   parser.o	\
+	   net.o
 REGRESS	 = regress/test-init-free		\
 	   regress/test-requ-init-free		\
 	   regress/test-url_enc			\
