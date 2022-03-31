@@ -37,10 +37,10 @@ main(int argc, char *argv[])
 	if ((yh = yhttp_init(8080)) == NULL)
 		err(1, "yhttp_init");
 
+	if (yh->pipe[0] != -1 || yh->pipe[1] != -1)
+		errx(1, "yhttp_init: have pipe not -1, want -1");
 	if (yh->is_dispatched != 0)
 		errx(1, "yhttp_init: have is_dispatched %d, want 0", yh->is_dispatched);
-	if (yh->quit != 0)
-		errx(1, "yhttp_init: have quit %d, want 0", yh->quit);
 	if (yh->port != 8080)
 		errx(1, "yhttp_init: have port %d, want 8080", yh->port);
 

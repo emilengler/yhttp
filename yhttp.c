@@ -43,8 +43,8 @@ yhttp_init(uint16_t port)
 	if ((yh = malloc(sizeof(struct yhttp))) == NULL)
 		return (NULL);
 
+	memset(yh->pipe, -1, sizeof(yh->pipe));
 	yh->is_dispatched = 0;
-	yh->quit = 0;
 	yh->port = port;
 
 	return (yh);

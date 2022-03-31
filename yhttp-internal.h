@@ -21,8 +21,8 @@
 #define PORT	8080
 
 struct yhttp {
+	int		pipe[2];	/* pipe(2). */
 	int		is_dispatched;	/* yhttp_dispatch() is running. */
-	int		quit;		/* yhttp_stop() sets this to true. */
 	uint16_t	port;		/* The TCP port. */
 };
 
