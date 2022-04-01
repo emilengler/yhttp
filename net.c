@@ -39,8 +39,8 @@ struct poll_data {
 	size_t		 used;
 };
 
-static int	net_handle_accept(struct poll_data *, int);
-static int	net_handle_client(struct poll_data *, int);
+static int	net_handle_accept(struct poll_data *, size_t);
+static int	net_handle_client(struct poll_data *, size_t);
 static int	net_nonblock(int);
 static void	net_poll_init(struct poll_data *);
 static void	net_poll_free(struct poll_data *);
@@ -50,9 +50,11 @@ static void	net_poll_del(struct poll_data *, int);
 static int	net_socket(int, uint16_t);
 
 static int
-net_handle_accept(struct poll_data *pd, int s)
+net_handle_accept(struct poll_data *pd, size_t index)
 {
-	int	c, rc;
+	int	c, rc, s;
+
+	s = pd->pfds[index].fd;
 
 	/* TODO: Handle the IP address somehow. */
 	if ((c = accept(s, NULL, NULL)) == -1)
@@ -65,12 +67,14 @@ net_handle_accept(struct poll_data *pd, int s)
 }
 
 static int
-net_handle_client(struct poll_data *pd, int s)
+net_handle_client(struct poll_data *pd, size_t index)
 {
 	unsigned char	buf[128];
 	ssize_t		n;
+	int		s;
 
 	memset(buf, '\0', sizeof(buf));
+	s = pd->pfds[index].fd;
 
 	if ((n = recv(s, buf, 127, 0)) == -1)
 		return (YHTTP_OK);	/* Not a FATAL error. */
@@ -284,7 +288,7 @@ net_dispatch(uint16_t port, int read_pipe)
 
 			if (pd.pfds[i].fd == s4 || pd.pfds[i].fd == s6) {
 				/* Handle incoming connection. */
-				rc = net_handle_accept(&pd, pd.pfds[i].fd);
+				rc = net_handle_accept(&pd, i);
 				if (rc != YHTTP_OK)
 					goto end;
 			} else if (pd.pfds[i].fd == read_pipe) {
@@ -293,7 +297,7 @@ net_dispatch(uint16_t port, int read_pipe)
 				break;
 			} else {
 				/* Handle connected client. */
-				rc = net_handle_client(&pd, pd.pfds[i].fd);
+				rc = net_handle_client(&pd, i);
 				if (rc != YHTTP_OK)
 					goto end;
 			}
