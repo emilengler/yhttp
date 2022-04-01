@@ -22,8 +22,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "hash.h"
+#include "net.h"
 #include "yhttp.h"
 #include "yhttp-internal.h"
 
@@ -243,4 +245,37 @@ yhttp_url_dec(const char *s)
 err:
 	free(res);
 	return (NULL);
+}
+
+int
+yhttp_dispatch(struct yhttp *yh, void (*cb)(struct yhttp_requ *, void *),
+	       void *udata)
+{
+	int	rc;
+
+	if (yh == NULL || cb == NULL)
+		return (YHTTP_EINVAL);
+
+	/* The instance has already been dispatched. */
+	if (yh->is_dispatched)
+		return (YHTTP_EBUSY);
+	yh->is_dispatched = 1;
+
+	/*
+	 * We are going to create a pipe(2) for the server, so that shutdown
+	 * can be communicated somehow (by sending EOF through the pipe(2)).
+	 */
+	if (pipe(yh->pipe) == -1)
+		return (YHTTP_ERRNO);
+
+	rc = net_dispatch(yh->port, yh->pipe[0]);
+
+	/* Destroy the pipe. */
+	close(yh->pipe[0]);
+	close(yh->pipe[1]);
+	memset(yh->pipe, -1, sizeof(yh->pipe));
+
+	yh->is_dispatched = 0;
+
+	return (YHTTP_OK);
 }
