@@ -279,3 +279,18 @@ yhttp_dispatch(struct yhttp *yh, void (*cb)(struct yhttp_requ *, void *),
 
 	return (YHTTP_OK);
 }
+
+int
+yhttp_stop(struct yhttp *yh)
+{
+	if (yh == NULL)
+		return (YHTTP_EINVAL);
+	if (!yh->is_dispatched)
+		return (YHTTP_ENOENT);
+
+	/* We tell the server to shutdown by closing its pipe(2). */
+	close(yh->pipe[1]);
+	yh->pipe[1] = -1;
+
+	return (YHTTP_OK);
+}
