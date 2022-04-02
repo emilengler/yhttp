@@ -28,15 +28,24 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "buf.h"
 #include "net.h"
+#include "parser.h"
 #include "yhttp.h"
 
 #define NGROW	128
 
 struct poll_data {
-	struct pollfd	*pfds;
-	size_t		 npfds;
-	size_t		 used;
+	/*
+	 * The parsers array is being kept alongside with the pfds array in
+	 * terms of size and indices, meaning that the index of a connected
+	 * client inside pfds also refers to its accompanying parser instance
+	 * inside parsers.
+	 */
+	struct parser	**parsers;
+	struct pollfd	 *pfds;
+	size_t		  npfds;
+	size_t		  used;
 };
 
 static int	net_handle_accept(struct poll_data *, size_t);
@@ -103,6 +112,7 @@ net_nonblock(int fd)
 static void
 net_poll_init(struct poll_data *pd)
 {
+	pd->parsers = NULL;
 	pd->pfds = NULL;
 	pd->npfds = 0;
 	pd->used = 0;
@@ -111,31 +121,48 @@ net_poll_init(struct poll_data *pd)
 static void
 net_poll_free(struct poll_data *pd)
 {
+	size_t	i;
+
+	/* Free parsers. */
+	for (i = 0; i < pd->npfds; ++i)
+		parser_free(pd->parsers[i]);
+	free(pd->parsers);
+
 	free(pd->pfds);
 }
 
 static int
 net_poll_grow(struct poll_data *pd)
 {
-	struct pollfd	*n_pfds;
+	struct parser	**n_parsers;
+	struct pollfd	 *n_pfds;
 	size_t		 n_npfds, i;
 
 	/* Check for integer overflows before reallocation. */
 	if (SIZE_MAX - NGROW < pd->npfds)
 		return (YHTTP_EOVERFLOW);
 	n_npfds = pd->npfds + 128;
+	if (n_npfds > SIZE_MAX / sizeof(struct parser *))
+		return (YHTTP_EOVERFLOW);
 	if (n_npfds > SIZE_MAX / sizeof(struct pollfd))
 		return (YHTTP_EOVERFLOW);
 
+	/* Reallocate the arrays. */
+	n_parsers = realloc(pd->parsers, sizeof(struct parser *) * n_npfds);
+	if (n_parsers == NULL)
+		return (YHTTP_ERRNO);
+	pd->parsers = n_parsers;
 	n_pfds = realloc(pd->pfds, sizeof(struct pollfd) * n_npfds);
 	if (n_pfds == NULL)
 		return (YHTTP_ERRNO);
-
 	pd->pfds = n_pfds;
+
 	pd->npfds = n_npfds;
 
 	/* Initialize the new fields. */
 	for (i = pd->used; i < pd->npfds; ++i) {
+		pd->parsers[i] = NULL;
+
 		pd->pfds[i].fd = -1;
 		pd->pfds[i].events = 0;
 		pd->pfds[i].revents = 0;
@@ -156,6 +183,9 @@ net_poll_add(struct poll_data *pd, int fd, short events)
 			return (rc);
 
 		/* No need to search for a free slot in this case. */
+		if ((pd->parsers[pd->used] = parser_init()) == NULL)
+			return (YHTTP_ERRNO);
+
 		pd->pfds[pd->used].fd = fd;
 		pd->pfds[pd->used++].events = events;
 
@@ -167,6 +197,9 @@ net_poll_add(struct poll_data *pd, int fd, short events)
 				break;
 		}
 		assert(i < pd->npfds);
+
+		if ((pd->parsers[i] = parser_init()) == NULL)
+			return (YHTTP_ERRNO);
 
 		pd->pfds[i].fd = fd;
 		pd->pfds[i].events = events;
@@ -187,6 +220,9 @@ net_poll_del(struct poll_data *pd, int fd)
 			break;
 	}
 	assert(i < pd->npfds);
+
+	parser_free(pd->parsers[i]);
+	pd->parsers[i] = NULL;
 
 	pd->pfds[i].fd = -1;
 	pd->pfds[i].events = 0;
