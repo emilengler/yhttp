@@ -60,6 +60,12 @@ static int	net_poll_add(struct poll_data *, int, short);
 static void	net_poll_del(struct poll_data *, size_t);
 static int	net_socket(int, uint16_t);
 
+static const char	*BAD_REQU = "HTTP/1.1 400 Bad Request\r\n"
+				    "Content-Type: text/plain\r\n"
+				    "Content-Length: 11\r\n"
+				    "\r\n"
+				    "Bad Request";
+
 static int
 net_handle_accept(struct poll_data *pd, size_t index)
 {
@@ -81,21 +87,39 @@ static int
 net_handle_client(struct poll_data *pd, size_t index,
 		  void (*cb)(struct yhttp_requ *, void *), void *udata)
 {
-	unsigned char	buf[128];
+	unsigned char	msg[4096];
 	ssize_t		n;
-	int		s;
+	int		rc, s;
 
-	memset(buf, '\0', sizeof(buf));
 	s = pd->pfds[index].fd;
 
-	if ((n = recv(s, buf, 127, 0)) == -1)
-		return (YHTTP_OK);	/* Not a FATAL error. */
-	else if (n == 0) {
-		/* Connection was closed. */
+	n = recv(s, msg, sizeof(msg), 0);
+	if (n <= 0) {
+		if (errno == EAGAIN)
+			return (YHTTP_OK);
+
+		/* Connection was closed or error occurred. */
 		net_poll_del(pd, index);
 		close(s);
-	} else
-		send(s, buf, 128, 0);
+	} else {
+		rc = parser_parse(pd->parsers[index], msg, n);
+		if (rc != YHTTP_OK) {
+			net_poll_del(pd, index);
+			close(s);
+			return (rc);
+		}
+
+		if (pd->parsers[index]->state == PARSER_DONE) {
+			cb(pd->parsers[index]->requ, udata);
+			/* TODO: Handle Connection header field. */
+			net_poll_del(pd, index);
+			close(s);
+		} else if (pd->parsers[index]->state == PARSER_ERR) {
+			send(s, BAD_REQU, strlen(BAD_REQU), 0);
+			net_poll_del(pd, index);
+			close(s);
+		}
+	}
 
 	return (YHTTP_OK);
 }
