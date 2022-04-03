@@ -55,7 +55,7 @@ static void	net_poll_init(struct poll_data *);
 static void	net_poll_free(struct poll_data *);
 static int	net_poll_grow(struct poll_data *);
 static int	net_poll_add(struct poll_data *, int, short);
-static void	net_poll_del(struct poll_data *, int);
+static void	net_poll_del(struct poll_data *, size_t);
 static int	net_socket(int, uint16_t);
 
 static int
@@ -89,7 +89,7 @@ net_handle_client(struct poll_data *pd, size_t index)
 		return (YHTTP_OK);	/* Not a FATAL error. */
 	else if (n == 0) {
 		/* Connection was closed. */
-		net_poll_del(pd, s);
+		net_poll_del(pd, index);
 		close(s);
 	} else
 		send(s, buf, 128, 0);
@@ -210,23 +210,14 @@ net_poll_add(struct poll_data *pd, int fd, short events)
 }
 
 static void
-net_poll_del(struct poll_data *pd, int fd)
+net_poll_del(struct poll_data *pd, size_t index)
 {
-	size_t	i;
+	parser_free(pd->parsers[index]);
+	pd->parsers[index] = NULL;
 
-	/* Search for fd. */
-	for (i = 0; i < pd->npfds; ++i) {
-		if (pd->pfds[i].fd == fd)
-			break;
-	}
-	assert(i < pd->npfds);
-
-	parser_free(pd->parsers[i]);
-	pd->parsers[i] = NULL;
-
-	pd->pfds[i].fd = -1;
-	pd->pfds[i].events = 0;
-	pd->pfds[i].revents = 0;
+	pd->pfds[index].fd = -1;
+	pd->pfds[index].events = 0;
+	pd->pfds[index].revents = 0;
 	--pd->used;
 }
 
