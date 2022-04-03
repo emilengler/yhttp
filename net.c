@@ -29,9 +29,9 @@
 #include <unistd.h>
 
 #include "buf.h"
-#include "net.h"
 #include "parser.h"
 #include "yhttp.h"
+#include "net.h"
 
 #define NGROW	128
 
@@ -49,7 +49,9 @@ struct poll_data {
 };
 
 static int	net_handle_accept(struct poll_data *, size_t);
-static int	net_handle_client(struct poll_data *, size_t);
+static int	net_handle_client(struct poll_data *, size_t,
+				  void (*)(struct yhttp_requ *, void *),
+				  void *);
 static int	net_nonblock(int);
 static void	net_poll_init(struct poll_data *);
 static void	net_poll_free(struct poll_data *);
@@ -76,7 +78,8 @@ net_handle_accept(struct poll_data *pd, size_t index)
 }
 
 static int
-net_handle_client(struct poll_data *pd, size_t index)
+net_handle_client(struct poll_data *pd, size_t index,
+		  void (*cb)(struct yhttp_requ *, void *), void *udata)
 {
 	unsigned char	buf[128];
 	ssize_t		n;
@@ -271,7 +274,8 @@ err:
 }
 
 int
-net_dispatch(uint16_t port, int read_pipe)
+net_dispatch(uint16_t port, int read_pipe,
+	     void (*cb)(struct yhttp_requ *, void *), void *udata)
 {
 	struct poll_data	pd;
 	size_t			i;
@@ -324,7 +328,7 @@ net_dispatch(uint16_t port, int read_pipe)
 				break;
 			} else {
 				/* Handle connected client. */
-				rc = net_handle_client(&pd, i);
+				rc = net_handle_client(&pd, i, cb, udata);
 				if (rc != YHTTP_OK)
 					goto end;
 			}

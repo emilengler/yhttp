@@ -17,6 +17,7 @@
 #ifndef NET_H
 #define NET_H
 
-int	net_dispatch(uint16_t, int);
+int	net_dispatch(uint16_t, int, void (*)(struct yhttp_requ *, void *),
+		     void *);
 
 #endif

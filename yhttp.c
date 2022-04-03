@@ -25,9 +25,9 @@
 #include <unistd.h>
 
 #include "hash.h"
-#include "net.h"
 #include "yhttp.h"
 #include "yhttp-internal.h"
+#include "net.h"
 
 struct yhttp *
 yhttp_init(uint16_t port)
@@ -268,7 +268,7 @@ yhttp_dispatch(struct yhttp *yh, void (*cb)(struct yhttp_requ *, void *),
 	if (pipe(yh->pipe) == -1)
 		return (YHTTP_ERRNO);
 
-	rc = net_dispatch(yh->port, yh->pipe[0]);
+	rc = net_dispatch(yh->port, yh->pipe[0], cb, udata);
 
 	/* Destroy the pipe. */
 	close(yh->pipe[0]);
