@@ -48,13 +48,13 @@ main(int argc, char *argv[])
 	internal = requ->internal;
 	if (internal == NULL)
 		errx(1, "yhttp_requ_init: requ->internal is NULL");
-	if (internal->header == NULL)
-		errx(1, "yhttp_requ_init: internal->header is NULL");
-	if (internal->query == NULL)
-		errx(1, "yhttp_requ_init: internal->query is NULL");
+	if (internal->headers == NULL)
+		errx(1, "yhttp_requ_init: internal->headers is NULL");
+	if (internal->queries == NULL)
+		errx(1, "yhttp_requ_init: internal->queries is NULL");
 
 	for (i = 0; i < NHASH; ++i) {
-		if (internal->header[i] != NULL || internal->query[i])
+		if (internal->headers[i] != NULL || internal->queries[i])
 			errx(1, "yhttp_requ_init: hash_init()");
 	}
 

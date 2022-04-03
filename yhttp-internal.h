@@ -27,8 +27,8 @@ struct yhttp {
 };
 
 struct yhttp_requ_internal {
-	struct hash	**header;	/* Header fields. */
-	struct hash	**query;	/* Query fields. */
+	struct hash	**headers;	/* Header fields. */
+	struct hash	**queries;	/* Query fields. */
 };
 
 struct yhttp_requ	*yhttp_requ_init(void);

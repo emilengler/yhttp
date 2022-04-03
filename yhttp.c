@@ -82,20 +82,20 @@ yhttp_requ_init(void)
 		goto err;
 	requ->internal = internal;
 
-	internal->header = NULL;
-	internal->query = NULL;
+	internal->headers = NULL;
+	internal->queries = NULL;
 
-	if ((internal->header = hash_init()) == NULL)
+	if ((internal->headers = hash_init()) == NULL)
 		goto err;
-	if ((internal->query = hash_init()) == NULL)
+	if ((internal->queries = hash_init()) == NULL)
 		goto err;
 
 	return (requ);
 err:
 	free(requ);
 	if (internal != NULL) {
-		hash_free(internal->header);
-		hash_free(internal->query);
+		hash_free(internal->headers);
+		hash_free(internal->queries);
 		free(internal);
 	}
 	return (NULL);
@@ -116,8 +116,8 @@ yhttp_requ_free(struct yhttp_requ *requ)
 	free(requ->body);
 	free(requ);
 
-	hash_free(internal->header);
-	hash_free(internal->query);
+	hash_free(internal->headers);
+	hash_free(internal->queries);
 	free(internal);
 }
 
