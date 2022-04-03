@@ -58,6 +58,7 @@ static void	net_poll_free(struct poll_data *);
 static int	net_poll_grow(struct poll_data *);
 static int	net_poll_add(struct poll_data *, int, short);
 static void	net_poll_del(struct poll_data *, size_t);
+static void	net_poll_close(struct poll_data *, size_t);
 static int	net_socket(int, uint16_t);
 
 static const char	*BAD_REQU = "HTTP/1.1 400 Bad Request\r\n"
@@ -99,25 +100,21 @@ net_handle_client(struct poll_data *pd, size_t index,
 			return (YHTTP_OK);
 
 		/* Connection was closed or error occurred. */
-		net_poll_del(pd, index);
-		close(s);
+		net_poll_close(pd, index);
 	} else {
 		rc = parser_parse(pd->parsers[index], msg, n);
 		if (rc != YHTTP_OK) {
-			net_poll_del(pd, index);
-			close(s);
+			net_poll_close(pd, index);
 			return (rc);
 		}
 
 		if (pd->parsers[index]->state == PARSER_DONE) {
 			cb(pd->parsers[index]->requ, udata);
 			/* TODO: Handle Connection header field. */
-			net_poll_del(pd, index);
-			close(s);
+			net_poll_close(pd, index);
 		} else if (pd->parsers[index]->state == PARSER_ERR) {
 			send(s, BAD_REQU, strlen(BAD_REQU), 0);
-			net_poll_del(pd, index);
-			close(s);
+			net_poll_close(pd, index);
 		}
 	}
 
@@ -246,6 +243,16 @@ net_poll_del(struct poll_data *pd, size_t index)
 	pd->pfds[index].events = 0;
 	pd->pfds[index].revents = 0;
 	--pd->used;
+}
+
+static void
+net_poll_close(struct poll_data *pd, size_t index)
+{
+	int	s;
+
+	s = pd->pfds[index].fd;
+	net_poll_del(pd, index);
+	close(s);
 }
 
 static int
