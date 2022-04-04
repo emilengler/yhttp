@@ -74,7 +74,7 @@ net_handle_accept(struct poll_data *pd, size_t index)
 
 	s = pd->pfds[index].fd;
 
-	/* TODO: Handle the IP address somehow. */
+	/* The IP address is being obtained later by getpeername(2). */
 	if ((c = accept(s, NULL, NULL)) == -1)
 		return (YHTTP_OK);	/* Not a FATAL error. */
 
