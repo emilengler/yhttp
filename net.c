@@ -147,6 +147,9 @@ net_poll_free(struct poll_data *pd)
 {
 	size_t	i;
 
+	if (pd == NULL)
+		return;
+
 	/* Free parsers. */
 	for (i = 0; i < pd->npfds; ++i)
 		parser_free(pd->parsers[i]);
