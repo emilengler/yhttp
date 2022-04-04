@@ -15,7 +15,8 @@ REGRESS	 = regress/test-init-free		\
 	   regress/test-url_dec			\
 	   regress/test-hash			\
 	   regress/test-buf			\
-	   regress/test-parser-init-free
+	   regress/test-parser-init-free	\
+	   regress/test-net_poll
 
 all: libyhttp.a
 
