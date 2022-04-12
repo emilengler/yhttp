@@ -17,9 +17,6 @@
 #ifndef YHTTP_INTERNAL_H
 #define YHTTP_INTERNAL_H
 
-/* TODO: The port MUST be changable by the application. */
-#define PORT	8080
-
 struct yhttp {
 	int		pipe[2];	/* pipe(2). */
 	int		is_dispatched;	/* yhttp_dispatch() is running. */
