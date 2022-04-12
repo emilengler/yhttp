@@ -30,6 +30,17 @@ static int	parser_rline(struct parser *);
 static int	parser_headers(struct parser *);
 static int	parser_body(struct parser *);
 
+/* enum yhttp_method <=> string associations. */
+static const char	*methods[] = {
+	"GET",		/* YHTTP_GET */
+	"HEAD",		/* YHTTP_HEAD */
+	"POST",		/* YHTTP_POST */
+	"PUT",		/* YHTTP_PUT */
+	"DELETE",	/* YHTTP_DELETE */
+	"PATCH",	/* YHTTP_PATCH */
+	NULL
+};
+
 static int
 parser_rline(struct parser *parser)
 {
