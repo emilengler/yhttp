@@ -26,9 +26,35 @@
 #include "yhttp.h"
 #include "yhttp-internal.h"
 
-static int	parser_rline(struct parser *);
-static int	parser_headers(struct parser *);
-static int	parser_body(struct parser *);
+static unsigned char	*parser_find_eol(unsigned char *, size_t);
+
+static int		 parser_rline(struct parser *);
+static int		 parser_headers(struct parser *);
+static int		 parser_body(struct parser *);
+
+/*
+ * Find the end of a line by either looking for CRLF or just LF.
+ */
+static unsigned char *
+parser_find_eol(unsigned char *data, size_t ndata)
+{
+	size_t	i;
+
+	for (i = 0; i < ndata; ++i) {
+		if (data[i] == '\r') {
+			/*
+			 * Exit the loop if and only if the next character to
+			 * a CR is an LF.
+			 */
+			if (i + 1 != ndata && data[i + 1] == '\n')
+				break;
+		} else if (data[i] == '\n')
+			break;
+	}
+
+	/* Return NULL if no EOL has been found. */
+	return (i == ndata ? NULL : data + i);
+}
 
 static int
 parser_rline(struct parser *parser)
