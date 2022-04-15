@@ -28,6 +28,8 @@
 
 static unsigned char	*parser_find_eol(unsigned char *, size_t);
 
+static int		 parser_rline_method(struct parser *, const char *);
+
 static int		 parser_rline(struct parser *);
 static int		 parser_headers(struct parser *);
 static int		 parser_body(struct parser *);
@@ -68,8 +70,61 @@ parser_find_eol(unsigned char *data, size_t ndata)
 }
 
 static int
+parser_rline_method(struct parser *parser, const char *method)
+{
+	size_t	i;
+
+	for (i = 0; methods[i] != NULL; ++i) {
+		if (strcmp(methods[i], method) == 0)
+			break;
+	}
+
+	if (methods[i] == NULL) {
+		/* No supported method found. */
+		parser->state = PARSER_ERR;
+	} else
+		parser->requ->method = i;
+
+	return (YHTTP_OK);
+}
+
+static int
 parser_rline(struct parser *parser)
 {
+	unsigned char	*eol, *spaces[2];
+	char		*method;
+	size_t		 len;
+	int		 rc;
+
+	eol = parser_find_eol(parser->buf.buf, parser->buf.used);
+	if (eol == NULL)
+		return (YHTTP_OK);
+	len = eol - parser->buf.buf;
+
+	/* See if we can treat the binary string like a normal string. */
+	if (memchr(parser->buf.buf, '\0', len) != NULL)
+		goto malformatted;
+
+	/* Find the two spaces in the rline. */
+	spaces[0] = memchr(parser->buf.buf, ' ', len);
+	if (spaces[0] == NULL)
+		goto malformatted;
+	spaces[1] = memchr(spaces[0] + 1, ' ', eol - spaces[0] + 1);
+	if (spaces[1] == NULL)
+		goto malformatted;
+
+	/* Parse the method. */
+	method = strndup((char *)parser->buf.buf, spaces[0] - parser->buf.buf);
+	if (method == NULL)
+		return (YHTTP_ERRNO);
+	rc = parser_rline_method(parser, method);
+	free(method);
+	if (rc != YHTTP_OK || parser->state == PARSER_ERR)
+		return (rc);
+
+	return (YHTTP_OK);
+malformatted:
+	parser->state = PARSER_ERR;
 	return (YHTTP_OK);
 }
 

@@ -17,7 +17,8 @@ REGRESS	 = regress/test-init-free		\
 	   regress/test-buf			\
 	   regress/test-parser-init-free	\
 	   regress/test-net_poll		\
-	   regress/test-parser_find_eol
+	   regress/test-parser_find_eol		\
+	   regress/test-parser_rline_method
 
 all: libyhttp.a
 
