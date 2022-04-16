@@ -17,6 +17,7 @@
 #include <sys/types.h>
 
 #include <assert.h>
+#include <ctype.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,6 +26,10 @@
 #include "parser.h"
 #include "yhttp.h"
 #include "yhttp-internal.h"
+
+static int		 parser_abnf_is_pct_encoded(const char *);
+static int		 parser_abnf_is_unreserved(int);
+static int		 parser_abnf_is_sub_delims(int);
 
 static unsigned char	*parser_find_eol(unsigned char *, size_t);
 
@@ -44,6 +49,32 @@ static const char	*methods[] = {
 	"PATCH",	/* YHTTP_PATCH */
 	NULL
 };
+
+static int
+parser_abnf_is_pct_encoded(const char *s)
+{
+	if (s[0] != '%')
+		return (0);
+	if (!isxdigit(s[1]) || !isxdigit(s[2]))
+		return (0);
+	if (s[1] == '0' && s[2] == '0')
+		return (0);
+	return (1);
+}
+
+static int
+parser_abnf_is_unreserved(int c)
+{
+	return (isalnum(c) || c == '-' || c == '.' || c == '_' || c == '~');
+}
+
+static int
+parser_abnf_is_sub_delims(int c)
+{
+	return (c == '!' || c == '$' || c == '&' || c == '\'' || c == '(' ||
+		c == ')' || c == '*' || c == '+' || c == ',' || c == ';' ||
+		c == '=');
+}
 
 /*
  * Find the end of a line by either looking for CRLF or just LF.
