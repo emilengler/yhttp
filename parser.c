@@ -23,9 +23,12 @@
 #include <string.h>
 
 #include "buf.h"
+#include "hash.h"
 #include "parser.h"
 #include "yhttp.h"
 #include "yhttp-internal.h"
+
+/* TODO: Reduce the amount of strdup(3) and strndup(3) calls. */
 
 static int		 parser_abnf_is_pct_encoded(const char *);
 static int		 parser_abnf_is_unreserved(int);
@@ -33,7 +36,13 @@ static int		 parser_abnf_is_sub_delims(int);
 
 static unsigned char	*parser_find_eol(unsigned char *, size_t);
 
+static int		 parser_query(struct parser *, struct hash *[],
+				      const char *);
+
 static int		 parser_rline_method(struct parser *, const char *);
+static int		 parser_rline_path(struct parser *, const char *);
+static int		 parser_rline_query(struct parser *, const char *);
+static int		 parser_rline_target(struct parser *, const char *);
 
 static int		 parser_rline(struct parser *);
 static int		 parser_headers(struct parser *);
@@ -101,6 +110,96 @@ parser_find_eol(unsigned char *data, size_t ndata)
 }
 
 static int
+parser_query(struct parser *parser, struct hash *ht[], const char *query)
+{
+	const char	*current, *next, *ampersand, *equal;
+	char		*key, *value;
+	size_t		 i, len;
+	int		 quit, rc;
+
+	len = strlen(query);
+
+	/* Validate the query. */
+	for (i = 0; i < strlen(query); ++i) {
+		if (!(parser_abnf_is_pct_encoded(query + i) ||
+		      parser_abnf_is_unreserved(query[i]) ||
+		      parser_abnf_is_sub_delims(query[i]) ||
+		      query[i] == '@' || query[i] == ':' ||
+		      query[i] == '/' || query[i] == '?'))
+			goto malformatted;
+	}
+
+	next = query;
+	quit = 0;
+	while (!quit) {
+		/*
+		 * This is the core of the actual query string parser, which
+		 * works as follows:
+		 * 1. Determine the end of the current key/value pair
+		 *    - Look for '&' first and '\0' afterwards.
+		 * 2. Determine if there is a value.
+		 *    - Check for the presence of '=' before '&'.
+		 *    - If not, set equal to ampersand in order to let
+		 *      strdup(3) return the zero-length string.
+		 * 3. Extract the key and the value accordingly.
+		 * 4. Check if the key is already present within the hash
+		 *    table.
+		 * 5. Insert the key and the value into the hash table.
+		 * 6. Continue with the character that follows to the ampersand
+		 *    or stop if the end of the query string has been reached.
+		 */
+
+		current = next;
+
+		/* Determine the end of this key/value pair. */
+		if ((ampersand = strchr(current, '&')) == NULL) {
+			/* Last key/value pair in the query string. */
+			ampersand = strchr(current, '\0');
+			quit = 1;
+		}
+		/* Determine if there is a value. */
+		equal = strchr(current, '=');
+		if (equal != NULL && equal > ampersand)
+			equal = ampersand;
+
+		/* Some boundary checks. */
+		if (current == ampersand || current == equal)
+			goto malformatted;
+
+		/* Extract the key and the value. */
+		if ((key = strndup(current, equal - current)) == NULL)
+			return (YHTTP_ERRNO);
+		value = strndup(equal + 1, ampersand - equal - 1);
+		if (value == NULL) {
+			free(key);
+			return (YHTTP_ERRNO);
+		}
+
+		/* Check if the key is already present in the hash table. */
+		if (hash_get(ht, key) != NULL) {
+			free(key);
+			free(value);
+			goto malformatted;
+		}
+
+		/* Insert the key and the value into the hash table. */
+		rc = hash_set(ht, key, value);
+		free(key);
+		free(value);
+		if (rc != YHTTP_OK)
+			return (rc);
+
+		/* Extract the next key/value pair. */
+		next = ampersand + 1;
+	}
+
+	return (YHTTP_OK);
+malformatted:
+	parser->state = PARSER_ERR;
+	return (YHTTP_OK);
+}
+
+static int
 parser_rline_method(struct parser *parser, const char *method)
 {
 	size_t	i;
@@ -115,6 +214,87 @@ parser_rline_method(struct parser *parser, const char *method)
 		parser->state = PARSER_ERR;
 	} else
 		parser->requ->method = i;
+
+	return (YHTTP_OK);
+}
+
+static int
+parser_rline_path(struct parser *parser, const char *path)
+{
+	size_t	i, len;
+
+	len = strlen(path);
+
+	/* Validate the path. */
+	if (path[0] != '/')
+		goto malformatted;
+	for (i = 1; i < len; ++i) {
+		if (path[i] == '/') {
+			/* Two slashes cannot follow each other. */
+			if (path[i - 1] == '/')
+				goto malformatted;
+		} else {
+			if (!(parser_abnf_is_unreserved(path[i]) ||
+			      parser_abnf_is_pct_encoded(path + i) ||
+			      parser_abnf_is_sub_delims(path[i]) ||
+			      path[i] == ':' || path[i] == '@'))
+				goto malformatted;
+		}
+	}
+
+	/* Copy the path. */
+	if ((parser->requ->path = strdup(path)) == NULL)
+		return (YHTTP_ERRNO);
+
+	return (YHTTP_OK);
+malformatted:
+	parser->state = PARSER_ERR;
+	return (YHTTP_OK);
+}
+
+static int
+parser_rline_query(struct parser *parser, const char *query)
+{
+	struct yhttp_requ_internal	*internal;
+
+	internal = parser->requ->internal;
+
+	return (parser_query(parser, internal->queries, query));
+}
+
+static int
+parser_rline_target(struct parser *parser, const char *target)
+{
+	const char	*questionmark;
+	char		*path, *query;
+	int		 rc;
+
+	/* Check if a query is present. */
+	questionmark = strchr(target, '?');
+
+	/* Extract the path depending on the presence of a query. */
+	if (questionmark == NULL)
+		path = strdup(target);
+	else
+		path = strndup(target, questionmark - target);
+	if (path == NULL)
+		return (YHTTP_ERRNO);
+
+	/* Parse the path. */
+	rc = parser_rline_path(parser, path);
+	free(path);
+	if (rc != YHTTP_OK || parser->state == PARSER_ERR)
+		return (rc);
+
+	/* Parse the query, if present. */
+	if (questionmark != NULL && questionmark[1] != '\0') {
+		if ((query = strdup(questionmark + 1)) == NULL)
+			return (YHTTP_ERRNO);
+		rc = parser_rline_query(parser, query);
+		free(query);
+		if (rc != YHTTP_OK || parser->state == PARSER_ERR)
+			return (rc);
+	}
 
 	return (YHTTP_OK);
 }
