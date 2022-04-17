@@ -316,6 +316,7 @@ parser_rline(struct parser *parser)
 {
 	unsigned char	*eol, *spaces[2];
 	char		*method, *target;
+	struct buf	 buf;
 	size_t		 len;
 	int		 rc;
 
@@ -354,6 +355,20 @@ parser_rline(struct parser *parser)
 	if (rc != YHTTP_OK || parser->state == PARSER_ERR)
 		return (rc);
 
+	/* The HTTP-version is ignored. */
+
+	/* Remove everything from the buffer that comes before eol. */
+	buf_init(&buf);
+	if (*eol == '\r')
+		rc = buf_append(&buf, eol + 2, parser->buf.used - len - 2);
+	else
+		rc = buf_append(&buf, eol + 1, parser->buf.used - len - 1);
+	if (rc != YHTTP_OK)
+		return (rc);
+	buf_wipe(&parser->buf);
+	memcpy(&parser->buf, &buf, sizeof(struct buf));
+
+	parser->state = PARSER_HEADERS;
 	return (YHTTP_OK);
 malformatted:
 	parser->state = PARSER_ERR;
