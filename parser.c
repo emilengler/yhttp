@@ -315,7 +315,7 @@ static int
 parser_rline(struct parser *parser)
 {
 	unsigned char	*eol, *spaces[2];
-	char		*method;
+	char		*method, *target;
 	size_t		 len;
 	int		 rc;
 
@@ -342,6 +342,15 @@ parser_rline(struct parser *parser)
 		return (YHTTP_ERRNO);
 	rc = parser_rline_method(parser, method);
 	free(method);
+	if (rc != YHTTP_OK || parser->state == PARSER_ERR)
+		return (rc);
+
+	/* Parse the target. */
+	target = strndup((char *)spaces[0] + 1, spaces[1] - spaces[0] - 1);
+	if (target == NULL)
+		return (YHTTP_ERRNO);
+	rc = parser_rline_target(parser, target);
+	free(target);
 	if (rc != YHTTP_OK || parser->state == PARSER_ERR)
 		return (rc);
 
