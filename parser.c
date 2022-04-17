@@ -112,15 +112,16 @@ parser_find_eol(unsigned char *data, size_t ndata)
 static int
 parser_query(struct parser *parser, struct hash *ht[], const char *query)
 {
-	const char	*current, *next, *ampersand, *equal;
+	struct hash	*node;
+	const char	*current, *ampersand, *equal;
 	char		*key, *value;
 	size_t		 i, len;
-	int		 quit, rc, has_value;
+	int		 rc, quit, has_value;
 
 	len = strlen(query);
 
 	/* Validate the query. */
-	for (i = 0; i < strlen(query); ++i) {
+	for (i = 0; i < len; ++i) {
 		if (!(parser_abnf_is_pct_encoded(query + i) ||
 		      parser_abnf_is_unreserved(query[i]) ||
 		      parser_abnf_is_sub_delims(query[i]) ||
@@ -129,75 +130,79 @@ parser_query(struct parser *parser, struct hash *ht[], const char *query)
 			goto malformatted;
 	}
 
-	next = query;
+	/* Parse the query. */
+	current = query;
 	quit = 0;
 	while (!quit) {
 		/*
-		 * This is the core of the actual query string parser, which
-		 * works as follows:
-		 * 1. Determine the end of the current key/value pair
-		 *    - Look for '&' first and '\0' afterwards.
-		 * 2. Determine if there is a value.
-		 *    - Check for the presence of '=' before '&'.
-		 *    - If not, set equal to ampersand in order to let
-		 *      strdup(3) return the zero-length string.
-		 * 3. Extract the key and the value accordingly.
-		 * 4. Check if the key is already present within the hash
-		 *    table.
-		 * 5. Insert the key and the value into the hash table.
-		 * 6. Continue with the character that follows to the ampersand
-		 *    or stop if the end of the query string has been reached.
+		 * This is the core of the query parser, which works as
+		 * follows:
+		 * 1. Look for the end of the current key/value pair, by
+		 *    searching the string for '&'.
+		 *    - If not found, we reached the last key/value pair
+		 *      and use '\0' as the ampersand then.
+		 * 2. Check if the string contains a value by looking for
+		 *    a '=' that occurrs before ampersand.
+		 * 3. Check for an empty key.
+		 * 4. Extract the key and the value through strndup(3).
+		 *    - If no value was found, do strdup("").
+		 * 5. Check if key is already present within the hash table.
+		 * 6. Insert key and value into the hash table.
+		 * 7. Parse the next key/value pair by setting current to
+		 *    ampersand + 1.
 		 */
 
-		current = next;
-		has_value = 1;
+		key = NULL;
+		value = NULL;
 
-		/* Determine the end of this key/value pair. */
-		if ((ampersand = strchr(current, '&')) == NULL) {
-			/* Last key/value pair in the query string. */
-			ampersand = strchr(current, '\0');
+		ampersand = strchr(current, '&');
+		if (ampersand == NULL) {
+			/* The last key/value pair has been reached. */
+			ampersand = query + len;
 			quit = 1;
 		}
-		/* Determine if there is a value. */
-		equal = strchr(current, '=');
-		if (equal == NULL || equal > ampersand) {
-			equal = ampersand;
-			has_value = 0;
-		}
 
-		/* Some boundary checks. */
-		if (current == ampersand || current == equal)
+		/* Check if there is a value. */
+		equal = strchr(current, '=');
+		if (equal == NULL || equal > ampersand)
+			has_value = 0;
+		else
+			has_value = 1;
+
+		/* Check for an empty key. */
+		if (ampersand == current || equal == current)
 			goto malformatted;
 
-		/* Extract the key and the value. */
-		if ((key = strndup(current, equal - current)) == NULL)
-			return (YHTTP_ERRNO);
-
-		if (has_value)
+		/* Extract the key and optionally the value. */
+		if (has_value) {
+			key = strndup(current, equal - current);
 			value = strndup(equal + 1, ampersand - equal - 1);
-		else
+		} else {
+			key = strndup(current, ampersand - current);
 			value = strdup("");
-		if (value == NULL) {
+		}
+		if (key == NULL || value == NULL) {
 			free(key);
+			free(value);
 			return (YHTTP_ERRNO);
 		}
 
 		/* Check if the key is already present in the hash table. */
-		if (hash_get(ht, key) != NULL) {
+		if ((node = hash_get(ht, key)) != NULL) {
 			free(key);
 			free(value);
 			goto malformatted;
 		}
 
-		/* Insert the key and the value into the hash table. */
+		/* Insert the key into the hash table. */
 		rc = hash_set(ht, key, value);
 		free(key);
 		free(value);
 		if (rc != YHTTP_OK)
 			return (rc);
 
-		/* Extract the next key/value pair. */
-		next = ampersand + 1;
+		/* Parse the next value. */
+		current = ampersand + 1;
 	}
 
 	return (YHTTP_OK);
