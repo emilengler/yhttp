@@ -115,7 +115,7 @@ parser_query(struct parser *parser, struct hash *ht[], const char *query)
 	const char	*current, *next, *ampersand, *equal;
 	char		*key, *value;
 	size_t		 i, len;
-	int		 quit, rc;
+	int		 quit, rc, has_value;
 
 	len = strlen(query);
 
@@ -150,6 +150,7 @@ parser_query(struct parser *parser, struct hash *ht[], const char *query)
 		 */
 
 		current = next;
+		has_value = 1;
 
 		/* Determine the end of this key/value pair. */
 		if ((ampersand = strchr(current, '&')) == NULL) {
@@ -159,8 +160,10 @@ parser_query(struct parser *parser, struct hash *ht[], const char *query)
 		}
 		/* Determine if there is a value. */
 		equal = strchr(current, '=');
-		if (equal != NULL && equal > ampersand)
+		if (equal == NULL || equal > ampersand) {
 			equal = ampersand;
+			has_value = 0;
+		}
 
 		/* Some boundary checks. */
 		if (current == ampersand || current == equal)
@@ -169,7 +172,11 @@ parser_query(struct parser *parser, struct hash *ht[], const char *query)
 		/* Extract the key and the value. */
 		if ((key = strndup(current, equal - current)) == NULL)
 			return (YHTTP_ERRNO);
-		value = strndup(equal + 1, ampersand - equal - 1);
+
+		if (has_value)
+			value = strndup(equal + 1, ampersand - equal - 1);
+		else
+			value = strdup("");
 		if (value == NULL) {
 			free(key);
 			return (YHTTP_ERRNO);
