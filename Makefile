@@ -9,16 +9,17 @@ OBJS	 = yhttp.o	\
 	   buf.o	\
 	   parser.o	\
 	   net.o
-REGRESS	 = regress/test-init-free		\
-	   regress/test-requ-init-free		\
-	   regress/test-url_enc			\
-	   regress/test-url_dec			\
-	   regress/test-hash			\
-	   regress/test-buf			\
-	   regress/test-parser-init-free	\
-	   regress/test-net_poll		\
-	   regress/test-parser_find_eol		\
-	   regress/test-parser_rline_method
+REGRESS	 = regress/test-init-free			\
+	   regress/test-requ-init-free			\
+	   regress/test-url_enc				\
+	   regress/test-url_dec				\
+	   regress/test-hash				\
+	   regress/test-buf				\
+	   regress/test-parser-init-free		\
+	   regress/test-net_poll			\
+	   regress/test-parser_find_eol			\
+	   regress/test-parser_rline_method		\
+	   regress/test-parser_abnf_is_pct_encoded
 
 all: libyhttp.a
 
