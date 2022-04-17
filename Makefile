@@ -20,7 +20,8 @@ REGRESS	 = regress/test-init-free			\
 	   regress/test-parser_find_eol			\
 	   regress/test-parser_rline_method		\
 	   regress/test-parser_abnf_is_pct_encoded	\
-	   regress/test-parser_rline_path
+	   regress/test-parser_rline_path		\
+	   regress/test-parser_query
 
 all: libyhttp.a
 
