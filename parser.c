@@ -357,12 +357,15 @@ parser_rline(struct parser *parser)
 	/* The HTTP-version is ignored. */
 
 	/* Remove everything from the buffer that comes before eol. */
-	if (*eol == '\r')
-		rc = buf_pop(&parser->buf, len + 2);
-	else
-		rc = buf_pop(&parser->buf, len + 1);
-	if (rc != YHTTP_OK)
-		return (rc);
+	if (parser->buf.used - len <= 2) {
+		if (*eol == '\r')
+			rc = buf_pop(&parser->buf, len + 2);
+		else
+			rc = buf_pop(&parser->buf, len + 1);
+		if (rc != YHTTP_OK)
+			return (rc);
+	} else
+		buf_wipe(&parser->buf);
 
 	parser->state = PARSER_HEADERS;
 	return (YHTTP_OK);
