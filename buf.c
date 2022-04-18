@@ -94,3 +94,21 @@ buf_append(struct buf *buf, const unsigned char *data, size_t ndata)
 
 	return (YHTTP_OK);
 }
+
+/*
+ * Remove the first n bytes in the buf.
+ */
+int
+buf_pop(struct buf *buf, size_t n)
+{
+	struct buf	n_buf;
+	int		rc;
+
+	buf_init(&n_buf);
+	if ((rc = buf_append(&n_buf, buf->buf + n, buf->used - n)) != YHTTP_OK)
+		return (rc);
+	buf_wipe(buf);
+	memcpy(buf, &n_buf, sizeof(struct buf));
+
+	return (YHTTP_OK);
+}

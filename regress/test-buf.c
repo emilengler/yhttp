@@ -27,6 +27,7 @@
 static void	test_buf_init(void);
 static void	test_buf_wipe(void);
 static void	test_buf_append(void);
+static void	test_buf_pop(void);
 
 static void
 test_buf_init(void)
@@ -119,11 +120,37 @@ test_buf_append(void)
 	buf_wipe(&buf);
 }
 
+static void
+test_buf_pop(void)
+{
+	const char		*content;
+	struct buf		 buf;
+
+	content = "hello world";
+
+	buf_init(&buf);
+	if (buf_append(&buf, (const unsigned char *)content, strlen(content)) != YHTTP_OK)
+		errx(1, "buf_append");
+
+	if (buf_pop(&buf, 6) != YHTTP_OK)
+		errx(1, "buf_pop");
+
+	if (buf.nbuf != 10)
+		errx(1, "buf_pop: have nbuf %zu, want 10", buf.nbuf);
+	if (buf.used != 5)
+		errx(1, "buf_pop: have used %zu, want 5", buf.used);
+	if (memcmp(buf.buf, "world", 5) != 0)
+		errx(1, "buf_pop: data does not match");
+
+	buf_wipe(&buf);
+}
+
 int
 main(int argc, char *argv[])
 {
 	test_buf_init();
 	test_buf_wipe();
 	test_buf_append();
+	test_buf_pop();
 	return (0);
 }
