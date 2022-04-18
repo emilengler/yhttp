@@ -95,15 +95,17 @@ parser_parse(struct parser *parser, const unsigned char *data, size_t ndata)
 	if ((rc = buf_append(&parser->buf, data, ndata)) != YHTTP_OK)
 		return (rc);
 
-	switch (parser->state) {
-	case PARSER_RLINE:
-		return (parser_rline(parser));
-	case PARSER_HEADERS:
-		return (parser_headers(parser));
-	case PARSER_BODY:
-		return (parser_body(parser));
-	default:
-		assert(0);
+	if (parser->state == PARSER_RLINE && parser->buf.used != 0) {
+		if ((rc = parser_rline(parser)) != YHTTP_OK)
+			return (rc);
+	}
+	if (parser->state == PARSER_HEADERS && parser->buf.used != 0) {
+		if ((rc = parser_headers(parser)) != YHTTP_OK)
+			return (rc);
+	}
+	if (parser->state == PARSER_BODY && parser->buf.used != 0) {
+		if ((rc = parser_body(parser)) != YHTTP_OK)
+			return (rc);
 	}
 
 	return (YHTTP_OK);
