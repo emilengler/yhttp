@@ -94,16 +94,3 @@ buf_append(struct buf *buf, const unsigned char *data, size_t ndata)
 
 	return (YHTTP_OK);
 }
-
-int
-buf_copy(struct buf *dst, const struct buf *src)
-{
-	if ((dst->buf = malloc(src->nbuf)) == NULL)
-		return (YHTTP_ERRNO);
-	memcpy(dst->buf, src->buf, src->used);
-
-	dst->nbuf = src->nbuf;
-	dst->used = src->used;
-
-	return (YHTTP_OK);
-}
