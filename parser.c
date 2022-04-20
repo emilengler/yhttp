@@ -34,6 +34,8 @@ static int		 parser_abnf_is_sub_delims(int);
 
 static unsigned char	*parser_find_eol(unsigned char *, size_t);
 
+static int		 parser_query(struct parser *, struct hash *[],
+				      const char *, size_t);
 static int		 parser_keyvalue(struct parser *, struct hash *[],
 					 const char *, size_t);
 
@@ -89,6 +91,53 @@ parser_find_eol(unsigned char *data, size_t ndata)
 
 	/* Return NULL if no EOL has been found. */
 	return (i == ndata ? NULL : data + i);
+}
+
+static int
+parser_query(struct parser *parser, struct hash *ht[], const char *s,
+	     size_t ns)
+{
+	const char	*start, *end;
+	size_t		 i;
+	int		 rc;
+
+	/* Validate the query string. */
+	for (i = 0; i < ns; ++i) {
+		if (!(parser_abnf_is_unreserved(s[i]) ||
+		      parser_abnf_is_pct_encoded(s + i) ||
+		      parser_abnf_is_sub_delims(s[i]) ||
+		      s[i] == ':' || s[i] == '@' || s[i] == '/' ||
+		      s[i] == '?'))
+			goto malformatted;
+	}
+
+	/* Parse all key/value pairs. */
+	start = s;
+	do {
+		/* Find the end of the key/value pair. */
+		end = memchr(start, '&', ns - (start - s));
+		if (end == NULL) {
+			/* The last key/value pair. */
+			end = s + ns;
+		}
+		if (end == start) {
+			/* The key/value pair is empty. */
+			++start;
+			continue;
+		}
+
+		rc = parser_keyvalue(parser, ht, start, end - start);
+		if (rc != YHTTP_OK || parser->state == PARSER_ERR)
+			return (rc);
+
+		/* Go to the next key/value pair. */
+		start = end + 1;
+	} while(end != s + ns);
+
+	return (YHTTP_OK);
+malformatted:
+	parser->state = PARSER_ERR;
+	return (YHTTP_OK);
 }
 
 static int
