@@ -28,7 +28,7 @@
 #include "yhttp.h"
 #include "yhttp-internal.h"
 
-static int		 parser_abnf_is_pct_encoded(const char *);
+static int		 parser_abnf_is_pct_encoded(const char *, size_t);
 static int		 parser_abnf_is_unreserved(int);
 static int		 parser_abnf_is_sub_delims(int);
 
@@ -58,8 +58,10 @@ static const char	*methods[] = {
 };
 
 static int
-parser_abnf_is_pct_encoded(const char *s)
+parser_abnf_is_pct_encoded(const char *s, size_t ns)
 {
+	if (ns < 3)
+		return (0);
 	if (s[0] != '%')
 		return (0);
 	if (!isxdigit(s[1]) || !isxdigit(s[2]))
@@ -118,7 +120,7 @@ parser_query(struct parser *parser, struct hash *ht[], const char *s,
 	/* Validate the query string. */
 	for (i = 0; i < ns; ++i) {
 		if (!(parser_abnf_is_unreserved(s[i]) ||
-		      parser_abnf_is_pct_encoded(s + i) ||
+		      parser_abnf_is_pct_encoded(s + i, ns - i) ||
 		      parser_abnf_is_sub_delims(s[i]) ||
 		      s[i] == ':' || s[i] == '@' || s[i] == '/' ||
 		      s[i] == '?'))
