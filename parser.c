@@ -43,6 +43,8 @@ static int		 parser_rline_method(struct parser *, const char *,
 					     size_t);
 static int		 parser_rline_path(struct parser *, const char *,
 					   size_t);
+static int		 parser_rline_query(struct parser *, const char *,
+					    size_t);
 
 static int		 parser_rline(struct parser *);
 static int		 parser_headers(struct parser *);
@@ -256,6 +258,16 @@ parser_rline_path(struct parser *parser, const char *s, size_t ns)
 malformatted:
 	parser->state = PARSER_ERR;
 	return (YHTTP_OK);
+}
+
+static int
+parser_rline_query(struct parser *parser, const char *s, size_t ns)
+{
+	struct yhttp_requ_internal	*internal;
+
+	internal = parser->requ->internal;
+
+	return (parser_query(parser, internal->queries, s, ns));
 }
 
 static int
