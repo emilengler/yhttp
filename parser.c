@@ -39,9 +39,23 @@ static int		 parser_query(struct parser *, struct hash *[],
 static int		 parser_keyvalue(struct parser *, struct hash *[],
 					 const char *, size_t);
 
+static int		 parser_rline_method(struct parser *, const char *,
+					     size_t);
+
 static int		 parser_rline(struct parser *);
 static int		 parser_headers(struct parser *);
 static int		 parser_body(struct parser *);
+
+/* String associations for methods with their enum yhttp_method. */
+static const char	*methods[] = {
+	"GET",		/* GET */
+	"HEAD",		/* HEAD */
+	"POST",		/* POST */
+	"PUT",		/* PUT */
+	"DELETE",	/* DELETE */
+	"PATCH",	/* PATCH */
+	NULL
+};
 
 static int
 parser_abnf_is_pct_encoded(const char *s)
@@ -184,6 +198,27 @@ parser_keyvalue(struct parser *parser, struct hash *ht[], const char *s,
 	return (YHTTP_OK);
 malformatted:
 	parser->state = PARSER_ERR;
+	return (YHTTP_OK);
+}
+
+static int
+parser_rline_method(struct parser *parser, const char *s, size_t ns)
+{
+	size_t	len;
+	int	i;
+
+	for (i = 0; methods[i] != NULL; ++i) {
+		len = strlen(methods[i]);
+		if (ns == len && memcmp(s, methods[i], len) == 0)
+			break;
+	}
+
+	if (methods[i] == NULL) {
+		/* No supported method found. */
+		parser->state = PARSER_ERR;
+	} else
+		parser->requ->method = i;
+
 	return (YHTTP_OK);
 }
 
