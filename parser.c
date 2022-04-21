@@ -41,6 +41,8 @@ static int		 parser_keyvalue(struct parser *, struct hash *[],
 
 static int		 parser_rline_method(struct parser *, const char *,
 					     size_t);
+static int		 parser_rline_path(struct parser *, const char *,
+					   size_t);
 
 static int		 parser_rline(struct parser *);
 static int		 parser_headers(struct parser *);
@@ -221,6 +223,38 @@ parser_rline_method(struct parser *parser, const char *s, size_t ns)
 	} else
 		parser->requ->method = i;
 
+	return (YHTTP_OK);
+}
+
+static int
+parser_rline_path(struct parser *parser, const char *s, size_t ns)
+{
+	size_t	i;
+
+	/* Validate the path. */
+	if (s == 0 || s[0] != '/')
+		goto malformatted;
+	for (i = 1; i < ns; ++i) {
+		if (s[i] == '/') {
+			/* Two slashes may not follow each other. */
+			if (s[i - 1] == '/')
+				goto malformatted;
+		} else {
+			if (!(parser_abnf_is_unreserved(s[i]) ||
+			      parser_abnf_is_pct_encoded(s + i, ns - i) ||
+			      parser_abnf_is_sub_delims(s[i]) ||
+			      s[i] == ':' || s[i] == '@'))
+				goto malformatted;
+		}
+	}
+
+	/* Extract the path. */
+	if ((parser->requ->path = strndup(s, ns)) == NULL)
+		return (YHTTP_ERRNO);
+
+	return (YHTTP_OK);
+malformatted:
+	parser->state = PARSER_ERR;
 	return (YHTTP_OK);
 }
 

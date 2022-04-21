@@ -20,7 +20,8 @@ REGRESS	 = regress/test-init-free		\
 	   regress/test-parser_find_eol		\
 	   regress/test-parser_keyvalue		\
 	   regress/test-parser_query		\
-	   regress/test-parser_rline_method
+	   regress/test-parser_rline_method	\
+	   regress/test-parser_rline_path
 
 all: libyhttp.a
 
