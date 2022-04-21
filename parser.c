@@ -68,7 +68,7 @@ parser_abnf_is_pct_encoded(const char *s, size_t ns)
 		return (0);
 	if (!isxdigit(s[1]) || !isxdigit(s[2]))
 		return (0);
-	if (s[1] == '0' || s[2] == '0')
+	if (s[1] == '0' && s[2] == '0')
 		return (0);
 	return (1);
 }
