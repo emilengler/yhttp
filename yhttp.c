@@ -62,6 +62,32 @@ yhttp_free(struct yhttp **yh)
 	*yh = NULL;
 }
 
+char *
+yhttp_header(struct yhttp_requ *requ, const char *name)
+{
+	struct yhttp_requ_internal	*internal;
+	struct hash			*node;
+
+	internal = requ->internal;
+	if ((node = hash_get(internal->headers, name)) == NULL)
+		return (NULL);
+	else
+		return (node->value);
+}
+
+char *
+yhttp_query(struct yhttp_requ *requ, const char *key)
+{
+	struct yhttp_requ_internal	*internal;
+	struct hash			*node;
+
+	internal = requ->internal;
+	if ((node = hash_get(internal->queries, key)) == NULL)
+		return (NULL);
+	else
+		return (node->value);
+}
+
 struct yhttp_requ *
 yhttp_requ_init(void)
 {

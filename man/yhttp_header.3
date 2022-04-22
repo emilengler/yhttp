@@ -33,11 +33,13 @@
 .Ft "char *"
 .Fo yhttp_query
 .Fa "struct yhttp_requ *requ"
-.Fa "const char *name"
+.Fa "const char *key"
 .Fc
 .Sh DESCRIPTION
 Obtain the value of a certain header field or query string identified by
 .Fa name
+or
+.Fa key
 from the HTTP request
 .Fa requ .
 .Pp
