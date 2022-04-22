@@ -45,6 +45,8 @@ static int		 parser_rline_path(struct parser *, const char *,
 					   size_t);
 static int		 parser_rline_query(struct parser *, const char *,
 					    size_t);
+static int		 parser_rline_target(struct parser *, const char *,
+					     size_t);
 
 static int		 parser_rline(struct parser *);
 static int		 parser_headers(struct parser *);
@@ -268,6 +270,28 @@ parser_rline_query(struct parser *parser, const char *s, size_t ns)
 	internal = parser->requ->internal;
 
 	return (parser_query(parser, internal->queries, s, ns));
+}
+
+static int
+parser_rline_target(struct parser *parser, const char *s, size_t ns)
+{
+	const char	*query;
+	int		 rc;
+
+	query = memchr(s, '?', ns);
+	if (query == NULL || query + 1 == s + ns) {
+		/* No query string is present. */
+		if (query == NULL)
+			return (parser_rline_path(parser, s, ns));
+		else
+			return (parser_rline_path(parser, s, ns - 1));
+	} else {
+		rc = parser_rline_path(parser, s, query - s);
+		if (rc != YHTTP_OK || parser->state == PARSER_ERR)
+			return (rc);
+		return (parser_rline_query(parser, query + 1,
+					   ns - (query - s) - 1));
+	}
 }
 
 static int
