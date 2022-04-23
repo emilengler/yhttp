@@ -31,6 +31,7 @@
 static int		 parser_abnf_is_pct_encoded(const char *, size_t);
 static int		 parser_abnf_is_unreserved(int);
 static int		 parser_abnf_is_sub_delims(int);
+static int		 parser_abnf_is_tchar(int);
 
 static unsigned char	*parser_find_eol(unsigned char *, size_t);
 
@@ -47,6 +48,9 @@ static int		 parser_rline_query(struct parser *, const char *,
 					    size_t);
 static int		 parser_rline_target(struct parser *, const char *,
 					     size_t);
+
+static int		 parser_header(struct parser *, const char *,
+				       size_t);
 
 static int		 parser_rline(struct parser *);
 static int		 parser_headers(struct parser *);
@@ -89,6 +93,15 @@ parser_abnf_is_sub_delims(int c)
 	return (c == '!' || c == '$' || c == '&' || c == '\'' || c == '(' ||
 		c == ')' || c == '*' || c == '+' || c == ',' || c == ';' ||
 		c == '=');
+}
+
+static int
+parser_abnf_is_tchar(int c)
+{
+	return (c == '!' || c == '#' || c == '$' || c == '%' || c == '&' ||
+		c == '\'' || c == '*' || c == '+' || c == '-' || c == '.' ||
+		c == '^' || c == '_' || c == '`' || c == '|' || c == '~' ||
+		isalnum(c));
 }
 
 /*
@@ -296,6 +309,67 @@ parser_rline_target(struct parser *parser, const char *s, size_t ns)
 }
 
 static int
+parser_header(struct parser *parser, const char *s, size_t ns)
+{
+	struct yhttp_requ_internal	*internal;
+	const char			*colon, *p;
+	char				*name, *value;
+	size_t				 i;
+	int				 rc;
+
+	if ((colon = memchr(s, ':', ns)) == NULL)
+		goto malformatted;
+
+	/* Validate the general structure. */
+	if (colon == s || colon + 2 >= s + ns || colon[1] != ' ')
+		goto malformatted;
+
+	/* Validate the field-name. */
+	for (p = s; p != colon; ++p) {
+		if (!parser_abnf_is_tchar(*p))
+			goto malformatted;
+	}
+	/* Validate the field-value. */
+	for (p = colon + 2; p != s + ns; ++p) {
+		if (!parser_abnf_is_tchar(*p))
+			goto malformatted;
+	}
+
+	/* Extract the field-name and convert it to lower-case. */
+	if ((name = strndup(s, colon - s)) == NULL)
+		return (YHTTP_ERRNO);
+	for (i = 0; name[i] != '\0'; ++i)
+		name[i] = tolower(name[i]);
+
+	/* Extract the field-value. */
+	if ((value = strndup(colon + 2, ns - (colon - s) - 2)) == NULL) {
+		free(name);
+		return (YHTTP_ERRNO);
+	}
+
+	internal = parser->requ->internal;
+
+	/* Check if a header field with name is already present. */
+	if (hash_get(internal->headers, name) != NULL) {
+		free(name);
+		free(value);
+		goto malformatted;
+	}
+
+	/* Insert the header field into the hash table. */
+	rc = hash_set(internal->headers, name, value);
+	free(name);
+	free(value);
+	if (rc != YHTTP_OK)
+		return (rc);
+
+	return (rc);
+malformatted:
+	parser->state = PARSER_ERR;
+	return (YHTTP_OK);
+}
+
+static int
 parser_rline(struct parser *parser)
 {
 	unsigned char	*eol, *p, *spaces[2];
@@ -352,6 +426,42 @@ malformatted:
 static int
 parser_headers(struct parser *parser)
 {
+	unsigned char	*sol, *eol;
+	size_t		 remaining;
+	int		 rc;
+
+	sol = parser->buf.buf;
+	do {
+		remaining = parser->buf.used - (sol - parser->buf.buf);
+		eol = parser_find_eol(sol, remaining);
+		if (eol == NULL)
+			return (YHTTP_OK);
+
+		/* Check for ASCII '\0'. */
+		if (memchr(sol, '\0', eol - sol) != NULL)
+			goto malformatted;
+
+		rc = parser_header(parser, (char *)sol, eol - sol);
+		if (rc != YHTTP_OK || parser->state == PARSER_ERR)
+			return (rc);
+
+		/* Go to the next line. */
+		if (*eol == '\r')
+			sol = eol + 2;
+		else
+			sol = eol + 1;
+	} while (!(*sol == '\r' || *sol == '\n'));
+
+	/* We are done with the header. */
+	parser->state = PARSER_BODY;
+	if (*sol == '\r')
+		return (buf_pop(&parser->buf, (sol - parser->buf.buf) + 2));
+	else
+		return (buf_pop(&parser->buf, (sol - parser->buf.buf) + 1));
+
+	return (YHTTP_OK);
+malformatted:
+	parser->state = PARSER_ERR;
 	return (YHTTP_OK);
 }
 
