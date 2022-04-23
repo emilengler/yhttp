@@ -217,6 +217,7 @@ parser_rline_method(struct parser *parser, const char *s, size_t ns)
 
 	for (i = 0; methods[i] != NULL; ++i) {
 		len = strlen(methods[i]);
+		assert(len != 0);
 		if (ns == len && memcmp(s, methods[i], len) == 0)
 			break;
 	}
@@ -297,6 +298,54 @@ parser_rline_target(struct parser *parser, const char *s, size_t ns)
 static int
 parser_rline(struct parser *parser)
 {
+	unsigned char	*eol, *p, *spaces[2];
+	size_t		 len;
+	int		 i, rc;
+
+	eol = parser_find_eol(parser->buf.buf, parser->buf.used);
+	if (eol == NULL)
+		return (YHTTP_OK);
+	len = eol - parser->buf.buf;
+
+	/* Check for ASCII '\0'. */
+	if (memchr(parser->buf.buf, '\0', len) != NULL)
+		goto malformatted;
+
+	/* Get the two spaces. */
+	i = 0;
+	for (p = parser->buf.buf; p != eol && i < 2; ++p) {
+		if (*p == ' ')
+			spaces[i++] = p;
+	}
+	if (i != 2)
+		goto malformatted;
+
+	/* Check the position of the two spaces. */
+	if (spaces[0] == parser->buf.buf || spaces[1] == eol - 1)
+		goto malformatted;
+
+	/* Extract the method. */
+	rc = parser_rline_method(parser, (char *)parser->buf.buf,
+				 spaces[0] - parser->buf.buf);
+	if (rc != YHTTP_OK || parser->state == PARSER_ERR)
+		goto malformatted;
+
+	/* Extract the target. */
+	rc = parser_rline_target(parser, (char *)spaces[0] + 1,
+				 spaces[1] - spaces[0] - 1);
+	if (rc != YHTTP_OK || parser->state == PARSER_ERR)
+		goto malformatted;
+
+	/* The HTTP-version can be ignored (for now). */
+
+	/* We are done with the rline. */
+	parser->state = PARSER_HEADERS;
+	if (*eol == '\r')
+		return (buf_pop(&parser->buf, len + 2));
+	else
+		return (buf_pop(&parser->buf, len + 1));
+malformatted:
+	parser->state = PARSER_ERR;
 	return (YHTTP_OK);
 }
 
