@@ -1,0 +1,2 @@
+PUT /foo?foz=baz&baz&fozz=fooo& HTTP/1.1
+foooo
