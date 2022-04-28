@@ -172,6 +172,7 @@ parser_query(struct parser *parser, struct hash *ht[], const char *s,
 	return (YHTTP_OK);
 malformatted:
 	parser->state = PARSER_ERR;
+	parser->err_code = 400;
 	return (YHTTP_OK);
 }
 
@@ -219,6 +220,7 @@ parser_keyvalue(struct parser *parser, struct hash *ht[], const char *s,
 	return (YHTTP_OK);
 malformatted:
 	parser->state = PARSER_ERR;
+	parser->err_code = 400;
 	return (YHTTP_OK);
 }
 
@@ -238,6 +240,7 @@ parser_rline_method(struct parser *parser, const char *s, size_t ns)
 	if (methods[i] == NULL) {
 		/* No supported method found. */
 		parser->state = PARSER_ERR;
+		parser->err_code = 501;
 	} else
 		parser->requ->method = i;
 
@@ -273,6 +276,7 @@ parser_rline_path(struct parser *parser, const char *s, size_t ns)
 	return (YHTTP_OK);
 malformatted:
 	parser->state = PARSER_ERR;
+	parser->err_code = 400;
 	return (YHTTP_OK);
 }
 
@@ -366,6 +370,7 @@ parser_header(struct parser *parser, const char *s, size_t ns)
 	return (rc);
 malformatted:
 	parser->state = PARSER_ERR;
+	parser->err_code = 400;
 	return (YHTTP_OK);
 }
 
@@ -423,6 +428,7 @@ parser_rline(struct parser *parser)
 		return (buf_pop(&parser->buf, len + 1));
 malformatted:
 	parser->state = PARSER_ERR;
+	parser->err_code = 400;
 	return (YHTTP_OK);
 }
 
@@ -468,6 +474,7 @@ parser_headers(struct parser *parser)
 	return (YHTTP_OK);
 malformatted:
 	parser->state = PARSER_ERR;
+	parser->err_code = 400;
 	return (YHTTP_OK);
 }
 
@@ -490,6 +497,7 @@ parser_init(void)
 
 	buf_init(&parser->buf);
 	parser->state = PARSER_RLINE;
+	parser->err_code = 0;
 
 	return (parser);
 err:

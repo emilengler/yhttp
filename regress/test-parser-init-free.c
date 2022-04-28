@@ -54,6 +54,8 @@ main(int argc, char *argv[])
 
 	if (parser->state != PARSER_RLINE)
 		errx(1, "parser_init: parser->state is not PARSER_RLINE");
+	if (parser->err_code != 0)
+		errx(1, "parser_init: parser->err_code is not 0");
 
 	parser_free(parser);
 	parser_free(NULL);

@@ -29,6 +29,7 @@ struct parser {
 	struct yhttp_requ	*requ;
 	struct buf		 buf;
 	enum parser_state	 state;
+	int			 err_code;
 };
 
 struct parser	*parser_init(void);
