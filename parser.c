@@ -376,6 +376,9 @@ parser_rline(struct parser *parser)
 	size_t		 len;
 	int		 i, rc;
 
+	if (parser->buf.used == 0)
+		return (YHTTP_OK);
+
 	eol = parser_find_eol(parser->buf.buf, parser->buf.used);
 	if (eol == NULL)
 		return (YHTTP_OK);
@@ -429,6 +432,9 @@ parser_headers(struct parser *parser)
 	unsigned char	*sol, *eol;
 	size_t		 remaining;
 	int		 rc;
+
+	if (parser->buf.used == 0)
+		return (YHTTP_OK);
 
 	sol = parser->buf.buf;
 	do {
@@ -518,15 +524,15 @@ parser_parse(struct parser *parser, const unsigned char *data, size_t ndata)
 	if ((rc = buf_append(&parser->buf, data, ndata)) != YHTTP_OK)
 		return (rc);
 
-	if (parser->state == PARSER_RLINE && parser->buf.used != 0) {
+	if (parser->state == PARSER_RLINE) {
 		if ((rc = parser_rline(parser)) != YHTTP_OK)
 			return (rc);
 	}
-	if (parser->state == PARSER_HEADERS && parser->buf.used != 0) {
+	if (parser->state == PARSER_HEADERS) {
 		if ((rc = parser_headers(parser)) != YHTTP_OK)
 			return (rc);
 	}
-	if (parser->state == PARSER_BODY && parser->buf.used != 0) {
+	if (parser->state == PARSER_BODY) {
 		if ((rc = parser_body(parser)) != YHTTP_OK)
 			return (rc);
 	}
