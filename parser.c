@@ -442,6 +442,7 @@ parser_headers(struct parser *parser)
 	if (parser->buf.used == 0)
 		return (YHTTP_OK);
 
+	/* Parse the header fields line by line. */
 	sol = parser->buf.buf;
 	do {
 		remaining = parser->buf.used - (sol - parser->buf.buf);
@@ -464,6 +465,13 @@ parser_headers(struct parser *parser)
 			sol = eol + 1;
 	} while (!(*sol == '\r' || *sol == '\n'));
 
+	/*
+	 * Check if a Transfer-Encoding has been supplied, which we do not
+	 * support.
+	 */
+	if (yhttp_header(parser->requ, "Transfer-Encoding") != NULL)
+		goto unsupported;
+
 	/* We are done with the header. */
 	parser->state = PARSER_BODY;
 	if (*sol == '\r')
@@ -475,6 +483,10 @@ parser_headers(struct parser *parser)
 malformatted:
 	parser->state = PARSER_ERR;
 	parser->err_code = 400;
+	return (YHTTP_OK);
+unsupported:
+	parser->state = PARSER_ERR;
+	parser->err_code = 501;
 	return (YHTTP_OK);
 }
 

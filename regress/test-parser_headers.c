@@ -65,6 +65,8 @@ main(int argc, char *argv[])
 	if (strcmp(v, "baz") != 0)
 		errx(1, "parser_headers: have value %s, want foz", v);
 
+	/* TODO: Add test for Transfer-Encoding. */
+
 	parser_free(parser);
 
 	return (0);
