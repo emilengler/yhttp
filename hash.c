@@ -89,6 +89,41 @@ hash_free(struct hash *ht[])
 	free(ht);
 }
 
+/*
+ * Return an allocated array that contains all nodes in the hash table.
+ * The end of this array is denoted by a node with adress NULL.
+ * The returned array must be passed to free(3) afterwards.
+ */
+struct hash **
+hash_dump(struct hash *ht[])
+{
+	struct hash	**nodes, *node;
+	size_t		  nnodes, i, j;
+
+	/* Count the nodes. */
+	nnodes = 1;
+	for (i = 0; i < NHASH; ++i) {
+		for (node = ht[i]; node != NULL; node = node->next)
+			++nnodes;
+	}
+
+	/* Allocate nodes. */
+	if (nnodes > SIZE_MAX / sizeof(struct hash *))
+		return (NULL);
+	if ((nodes = malloc(sizeof(struct hash *) * nnodes)) == NULL)
+		return (NULL);
+
+	/* Initialize nodes. */
+	i = 0;	/* Index in nodes. */
+	for (j = 0; j < NHASH; ++j) {
+		for (node = ht[j]; node != NULL; node = node->next)
+			nodes[i++] = node;
+	}
+	nodes[i] = NULL;
+
+	return (nodes);
+}
+
 struct hash *
 hash_get(struct hash *ht[], const char *name)
 {

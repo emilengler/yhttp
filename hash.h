@@ -27,6 +27,7 @@ struct hash {
 struct hash	**hash_init(void);
 void		  hash_free(struct hash *[]);
 
+struct hash	**hash_dump(struct hash *[]);
 struct hash	 *hash_get(struct hash *[], const char *);
 int		  hash_set(struct hash *[], const char *, const char *);
 void		  hash_unset(struct hash *[], const char *);

@@ -28,6 +28,7 @@ struct name_hash {
 
 static void	test_hash(void);
 static void	test_hash_init(void);
+static void	test_hash_dump(void);
 static void	test_hash_set(void);
 static void	test_hash_set1(void);
 static void	test_hash_set2(void);
@@ -82,6 +83,33 @@ test_hash_init(void)
 			errx(1, "hash_init: ht[%zu] is not NULL", i);
 	}
 
+	hash_free(ht);
+}
+
+static void
+test_hash_dump(void)
+{
+	struct hash	**ht, **dump;
+
+	if ((ht = hash_init()) == NULL)
+		err(1, "hash_init");
+
+	if (hash_set(ht, "foo", "bar") != YHTTP_OK)
+		errx(1, "hash_set");
+	if (hash_set(ht, "bar", "foo") != YHTTP_OK)
+		errx(1, "hash_set");
+
+	if ((dump = hash_dump(ht)) == NULL)
+		errx(1, "hash_dump");
+
+	if (dump[0] != hash_get(ht, "bar"))
+		errx(1, "hash_dump: dump[0] is not bar");
+	if (dump[1] != hash_get(ht, "foo"))
+		errx(1, "hash_dump: dump[1] is not foo");
+	if (dump[2] != NULL)
+		errx(1, "hash_dump: dump[2] is not NULL");
+
+	free(dump);
 	hash_free(ht);
 }
 
@@ -227,6 +255,7 @@ main(int argc, char *argv[])
 {
 	test_hash();
 	test_hash_init();
+	test_hash_dump();
 	test_hash_set();
 	test_hash_unset();
 	hash_free(NULL);
