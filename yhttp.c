@@ -99,8 +99,15 @@ yhttp_requ_init(void)
 
 	requ->path = NULL;
 	requ->client_ip = NULL;
+
+	/*
+	 * The request body will be stored inside the buffer of the parser
+	 * rather than in a separately allocated space, meaning the clean-up
+	 * is not in our scope.
+	 */
 	requ->body = NULL;
 	requ->nbody = 0;
+
 	requ->method = YHTTP_GET;
 
 	/* Initialize the internal field. */
@@ -137,9 +144,9 @@ yhttp_requ_free(struct yhttp_requ *requ)
 
 	internal = requ->internal;
 
+	/* See the comment regarding requ->body inside yhttp_requ_init(). */
 	free(requ->path);
 	free(requ->client_ip);
-	free(requ->body);
 	free(requ);
 
 	hash_free(internal->headers);

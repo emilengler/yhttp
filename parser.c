@@ -518,6 +518,11 @@ unsupported:
 static int
 parser_body(struct parser *parser)
 {
+	if (parser->buf.used == parser->requ->nbody) {
+		parser->requ->body = parser->buf.buf;
+		parser->state = PARSER_DONE;
+	}
+
 	return (YHTTP_OK);
 }
 
