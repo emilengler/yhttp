@@ -28,18 +28,18 @@
 .In yhttp.h
 .Ft int
 .Fo yhttp_resp_status
-.Fa "struct yhttp *yh"
+.Fa "struct yhttp_requ *requ"
 .Fa "int status"
 .Fc
 .Ft int
 .Fo yhttp_resp_header
-.Fa "struct yhttp *yh"
+.Fa "struct yhttp_requ *requ"
 .Fa "const char *name"
 .Fa "const char *value"
 .Fc
 .Ft int
 .Fo yhttp_resp_body
-.Fa "struct yhttp *yh"
+.Fa "struct yhttp_requ *requ"
 .Fa "const unsigned char *body"
 .Fa "size_t nbody"
 .Fc
@@ -100,6 +100,3 @@ Invalid arguments supplied.
 .Sh AUTHORS
 Written by
 .An Emil Engler Aq Mt engler+yhttp@unveil2.org .
-.Sh CAVEATS
-Using these functions outside of a callback function will result in undefined
-behavior.

@@ -54,10 +54,10 @@ char		*yhttp_query(struct yhttp_requ *, const char *);
 char		*yhttp_url_enc(const char *);
 char		*yhttp_url_dec(const char *);
 
-int		 yhttp_resp_status(struct yhttp *, int);
-int		 yhttp_resp_header(struct yhttp *, const char *,
+int		 yhttp_resp_status(struct yhttp_requ *, int);
+int		 yhttp_resp_header(struct yhttp_requ *, const char *,
 				   const char *);
-int		 yhttp_resp_body(struct yhttp *, const unsigned char *,
+int		 yhttp_resp_body(struct yhttp_requ *, const unsigned char *,
 				 size_t);
 
 int		 yhttp_dispatch(struct yhttp *,
