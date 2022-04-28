@@ -19,6 +19,7 @@
 #include <err.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "../yhttp.h"
 #include "../yhttp-internal.h"
@@ -29,6 +30,7 @@ main(int argc, char *argv[])
 {
 	struct yhttp_requ_internal	*internal;
 	struct yhttp_requ		*requ;
+	struct yhttp_resp		*default_resp;
 	size_t				 i;
 
 	if ((requ = yhttp_requ_init()) == NULL)
@@ -52,11 +54,20 @@ main(int argc, char *argv[])
 		errx(1, "yhttp_requ_init: internal->headers is NULL");
 	if (internal->queries == NULL)
 		errx(1, "yhttp_requ_init: internal->queries is NULL");
-
 	for (i = 0; i < NHASH; ++i) {
 		if (internal->headers[i] != NULL || internal->queries[i])
-			errx(1, "yhttp_requ_init: hash_init()");
+			errx(1, "yhttp_requ_init: hash_init");
 	}
+
+	if ((default_resp = yhttp_resp_init()) == NULL)
+		errx(1, "yhttp_requ_init: yhttp_resp_init");
+	hash_free(default_resp->headers);
+	hash_free(internal->resp->headers);
+	default_resp->headers = NULL;
+	internal->resp->headers = NULL;
+	if (memcmp(default_resp, internal->resp, sizeof(struct yhttp_resp)) != 0)
+		errx(1, "yhttp_requ_init: internal->resp is not initialized");
+	yhttp_resp_free(default_resp);
 
 	yhttp_requ_free(requ);
 	yhttp_requ_free(NULL);

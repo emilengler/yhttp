@@ -117,10 +117,13 @@ yhttp_requ_init(void)
 
 	internal->headers = NULL;
 	internal->queries = NULL;
+	internal->resp = NULL;
 
 	if ((internal->headers = hash_init()) == NULL)
 		goto err;
 	if ((internal->queries = hash_init()) == NULL)
+		goto err;
+	if ((internal->resp = yhttp_resp_init()) == NULL)
 		goto err;
 
 	return (requ);
@@ -129,6 +132,7 @@ err:
 	if (internal != NULL) {
 		hash_free(internal->headers);
 		hash_free(internal->queries);
+		yhttp_resp_free(internal->resp);
 		free(internal);
 	}
 	return (NULL);
@@ -151,7 +155,39 @@ yhttp_requ_free(struct yhttp_requ *requ)
 
 	hash_free(internal->headers);
 	hash_free(internal->queries);
+	yhttp_resp_free(internal->resp);
 	free(internal);
+}
+
+struct yhttp_resp *
+yhttp_resp_init(void)
+{
+	struct yhttp_resp	*resp;
+
+	if ((resp = malloc(sizeof(struct yhttp_resp))) == NULL)
+		return (NULL);
+
+	if ((resp->headers = hash_init()) == NULL) {
+		free(resp);
+		return (NULL);
+	}
+
+	resp->body = NULL;
+	resp->nbody = 0;
+	resp->status = 200;
+
+	return (resp);
+}
+
+void
+yhttp_resp_free(struct yhttp_resp *resp)
+{
+	if (resp == NULL)
+		return;
+
+	hash_free(resp->headers);
+	free(resp->body);
+	free(resp);
 }
 
 /*

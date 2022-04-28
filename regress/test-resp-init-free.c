@@ -14,32 +14,41 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef YHTTP_INTERNAL_H
-#define YHTTP_INTERNAL_H
+#include <sys/types.h>
 
-struct yhttp {
-	int		pipe[2];	/* pipe(2). */
-	int		is_dispatched;	/* yhttp_dispatch() is running. */
-	uint16_t	port;		/* The TCP port. */
-};
+#include <err.h>
+#include <stdint.h>
+#include <stdlib.h>
 
-struct yhttp_requ_internal {
-	struct hash		**headers;	/* Header fields. */
-	struct hash		**queries;	/* Query fields. */
-	struct yhttp_resp	 *resp;
-};
+#include "../yhttp.h"
+#include "../yhttp-internal.h"
+#include "../hash.c"
 
-struct yhttp_resp {
-	struct hash	**headers;	/* The header fields. */
-	unsigned char	 *body;		/* The message body. */
-	size_t		  nbody;	/* The length of the body. */
-	int		  status;	/* The HTTP status code. */
-};
+int
+main(int argc, char *argv[])
+{
+	struct yhttp_resp	*resp;
+	size_t			 i;
 
-struct yhttp_requ	*yhttp_requ_init(void);
-void			 yhttp_requ_free(struct yhttp_requ *);
+	if ((resp = yhttp_resp_init()) == NULL)
+		errx(1, "yhttp_resp_init");
 
-struct yhttp_resp	*yhttp_resp_init(void);
-void			 yhttp_resp_free(struct yhttp_resp *);
+	if (resp->headers == NULL)
+		errx(1, "yhttp_resp_init: resp->headers is NULL");
+	for (i = 0; i < NHASH; ++i) {
+		if (resp->headers[i] != NULL)
+			errx(1, "yhttp_resp_init: hash_init");
+	}
 
-#endif
+	if (resp->body != NULL)
+		errx(1, "yhttp_resp_init: resp->body is not NULL");
+	if (resp->nbody != 0)
+		errx(1, "yhttp_resp_init: resp->nbody is not 0");
+	if (resp->status != 200)
+		errx(1, "yhttp_resp_init: resp->status is not 200");
+
+	yhttp_resp_free(resp);
+	yhttp_resp_free(NULL);
+
+	return (0);
+}

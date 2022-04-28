@@ -26,7 +26,8 @@ REGRESS	 = regress/test-init-free		\
 	   regress/test-parser_rline_target	\
 	   regress/test-parser_rline		\
 	   regress/test-parser_header		\
-	   regress/test-parser_headers
+	   regress/test-parser_headers		\
+	   regress/test-resp-init-free
 
 all: libyhttp.a
 
