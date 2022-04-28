@@ -19,6 +19,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -51,6 +52,7 @@ static int		 parser_rline_target(struct parser *, const char *,
 
 static int		 parser_header(struct parser *, const char *,
 				       size_t);
+static int		 parser_cl(struct parser *);
 
 static int		 parser_rline(struct parser *);
 static int		 parser_headers(struct parser *);
@@ -375,6 +377,24 @@ malformatted:
 }
 
 static int
+parser_cl(struct parser *parser)
+{
+	const char	*value;
+
+	/* Check if a "Content-Length" header field has been supplied. */
+	if ((value = yhttp_header(parser->requ, "Content-Length")) == NULL)
+		return (YHTTP_OK);
+
+	if (sscanf(value, "%zu", &parser->requ->nbody) == 1)
+		return (YHTTP_OK);
+	else {
+		parser->state = PARSER_ERR;
+		parser->err_code = 400;
+		return (YHTTP_OK);
+	}
+}
+
+static int
 parser_rline(struct parser *parser)
 {
 	unsigned char	*eol, *p, *spaces[2];
@@ -471,6 +491,11 @@ parser_headers(struct parser *parser)
 	 */
 	if (yhttp_header(parser->requ, "Transfer-Encoding") != NULL)
 		goto unsupported;
+
+	/* Get the Content-Length. */
+	rc = parser_cl(parser);
+	if (rc != YHTTP_OK || parser->state == PARSER_ERR)
+		return (rc);
 
 	/* We are done with the header. */
 	parser->state = PARSER_BODY;
