@@ -113,6 +113,7 @@ net_handle_client(struct poll_data *pd, size_t index,
 			/* TODO: Handle Connection header field. */
 			net_poll_close(pd, index);
 		} else if (pd->parsers[index]->state == PARSER_ERR) {
+			/* TODO: Respect err_code. */
 			send(s, BAD_REQU, strlen(BAD_REQU), 0);
 			net_poll_close(pd, index);
 		}
