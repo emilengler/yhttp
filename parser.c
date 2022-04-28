@@ -23,16 +23,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "abnf.h"
 #include "buf.h"
 #include "hash.h"
 #include "parser.h"
 #include "yhttp.h"
 #include "yhttp-internal.h"
-
-static int		 parser_abnf_is_pct_encoded(const char *, size_t);
-static int		 parser_abnf_is_unreserved(int);
-static int		 parser_abnf_is_sub_delims(int);
-static int		 parser_abnf_is_tchar(int);
 
 static unsigned char	*parser_find_eol(unsigned char *, size_t);
 
@@ -69,43 +65,6 @@ static const char	*methods[] = {
 	NULL
 };
 
-static int
-parser_abnf_is_pct_encoded(const char *s, size_t ns)
-{
-	if (ns < 3)
-		return (0);
-	if (s[0] != '%')
-		return (0);
-	if (!isxdigit(s[1]) || !isxdigit(s[2]))
-		return (0);
-	if (s[1] == '0' && s[2] == '0')
-		return (0);
-	return (1);
-}
-
-static int
-parser_abnf_is_unreserved(int c)
-{
-	return (isalnum(c) || c == '-' || c == '.' || c == '_' || c == '~');
-}
-
-static int
-parser_abnf_is_sub_delims(int c)
-{
-	return (c == '!' || c == '$' || c == '&' || c == '\'' || c == '(' ||
-		c == ')' || c == '*' || c == '+' || c == ',' || c == ';' ||
-		c == '=');
-}
-
-static int
-parser_abnf_is_tchar(int c)
-{
-	return (c == '!' || c == '#' || c == '$' || c == '%' || c == '&' ||
-		c == '\'' || c == '*' || c == '+' || c == '-' || c == '.' ||
-		c == '^' || c == '_' || c == '`' || c == '|' || c == '~' ||
-		isalnum(c));
-}
-
 /*
  * Find the end of a line by either looking for CRLF or just LF.
  */
@@ -140,9 +99,9 @@ parser_query(struct parser *parser, struct hash *ht[], const char *s,
 
 	/* Validate the query string. */
 	for (i = 0; i < ns; ++i) {
-		if (!(parser_abnf_is_unreserved(s[i]) ||
-		      parser_abnf_is_pct_encoded(s + i, ns - i) ||
-		      parser_abnf_is_sub_delims(s[i]) ||
+		if (!(abnf_is_unreserved(s[i]) ||
+		      abnf_is_pct_encoded(s + i, ns - i) ||
+		      abnf_is_sub_delims(s[i]) ||
 		      s[i] == ':' || s[i] == '@' || s[i] == '/' ||
 		      s[i] == '?'))
 			goto malformatted;
@@ -263,9 +222,9 @@ parser_rline_path(struct parser *parser, const char *s, size_t ns)
 			if (s[i - 1] == '/')
 				goto malformatted;
 		} else {
-			if (!(parser_abnf_is_unreserved(s[i]) ||
-			      parser_abnf_is_pct_encoded(s + i, ns - i) ||
-			      parser_abnf_is_sub_delims(s[i]) ||
+			if (!(abnf_is_unreserved(s[i]) ||
+			      abnf_is_pct_encoded(s + i, ns - i) ||
+			      abnf_is_sub_delims(s[i]) ||
 			      s[i] == ':' || s[i] == '@'))
 				goto malformatted;
 		}
@@ -332,12 +291,12 @@ parser_header(struct parser *parser, const char *s, size_t ns)
 
 	/* Validate the field-name. */
 	for (p = s; p != colon; ++p) {
-		if (!parser_abnf_is_tchar(*p))
+		if (!abnf_is_tchar(*p))
 			goto malformatted;
 	}
 	/* Validate the field-value. */
 	for (p = colon + 2; p != s + ns; ++p) {
-		if (!parser_abnf_is_tchar(*p))
+		if (!abnf_is_tchar(*p))
 			goto malformatted;
 	}
 
