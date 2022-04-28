@@ -22,6 +22,7 @@ enum parser_state {
 	PARSER_HEADERS,	/* Header fields. */
 	PARSER_BODY,	/* Message body. */
 	PARSER_DONE,	/* Request has been parsed successfully. */
+	/* TODO: Remove PARSER_ERR by err_code. */
 	PARSER_ERR	/* Request is malformatted. */
 };
 
