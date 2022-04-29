@@ -148,10 +148,16 @@ hash_set(struct hash *ht[], const char *name, const char *value)
 
 	/* Check if the entry already exists. */
 	if ((node = hash_get(ht, name)) != NULL) {
-		/* The entry already exists, overwrite value. */
+		/* The entry already exists, overwrite name and value. */
+		free(node->name);
 		free(node->value);
+		node->name = NULL;
+		node->value = NULL;
+
+		if ((node->name = strdup(name)) == NULL)
+			goto err;
 		if ((node->value = strdup(value)) == NULL)
-			return (YHTTP_ERRNO);
+			goto err;
 	} else {
 		/* The entry does not exist yet, create and add it. */
 		if ((node = malloc(sizeof(struct hash))) == NULL)
