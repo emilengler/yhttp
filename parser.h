@@ -22,7 +22,7 @@ enum parser_state {
 	PARSER_HEADERS,	/* Header fields. */
 	PARSER_BODY,	/* Message body. */
 	PARSER_DONE,	/* Request has been parsed successfully. */
-	/* TODO: Remove PARSER_ERR by err_code. */
+	/* TODO: Remove PARSER_ERR by err. */
 	PARSER_ERR	/* Request is malformatted. */
 };
 
@@ -30,7 +30,7 @@ struct parser {
 	struct yhttp_requ	*requ;
 	struct buf		 buf;
 	enum parser_state	 state;
-	int			 err_code;
+	int			 err;
 };
 
 struct parser	*parser_init(void);
