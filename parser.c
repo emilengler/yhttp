@@ -279,7 +279,6 @@ parser_header(struct parser *parser, const char *s, size_t ns)
 	struct yhttp_requ_internal	*internal;
 	const char			*colon, *p;
 	char				*name, *value;
-	size_t				 i;
 	int				 rc;
 
 	if ((colon = memchr(s, ':', ns)) == NULL)
@@ -303,8 +302,6 @@ parser_header(struct parser *parser, const char *s, size_t ns)
 	/* Extract the field-name and convert it to lower-case. */
 	if ((name = strndup(s, colon - s)) == NULL)
 		return (YHTTP_ERRNO);
-	for (i = 0; name[i] != '\0'; ++i)
-		name[i] = tolower(name[i]);
 
 	/* Extract the field-value. */
 	if ((value = strndup(colon + 2, ns - (colon - s) - 2)) == NULL) {

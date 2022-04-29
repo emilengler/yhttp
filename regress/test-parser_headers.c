@@ -52,15 +52,15 @@ main(int argc, char *argv[])
 	if (memcmp(parser->buf.buf, "foo", 3) != 0)
 		errx(1, "parser_headers: buf_pop() failed");
 
-	if ((v = yhttp_header(parser->requ, "foo")) == NULL)
-		errx(1, "parser_headers: foo is NULL");
+	if ((v = yhttp_header(parser->requ, "Foo")) == NULL)
+		errx(1, "parser_headers: Foo is NULL");
 	if (strcmp(v, "Bar") != 0)
 		errx(1, "parser_headers: have value %s, want Bar", v);
-	if ((v = yhttp_header(parser->requ, "bar")) == NULL)
-		errx(1, "parser_headers: bar is NULL");
+	if ((v = yhttp_header(parser->requ, "BAR")) == NULL)
+		errx(1, "parser_headers: Bar is NULL");
 	if (strcmp(v, "Foo") != 0)
 		errx(1, "parser_headers: have value %s, want Foo", v);
-	if ((v = yhttp_header(parser->requ, "foz")) == NULL)
+	if ((v = yhttp_header(parser->requ, "fOz")) == NULL)
 		errx(1, "parser_headers: foz is NULL");
 	if (strcmp(v, "baz") != 0)
 		errx(1, "parser_headers: have value %s, want foz", v);

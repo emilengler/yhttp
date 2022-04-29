@@ -16,6 +16,7 @@
 
 #include <sys/types.h>
 
+#include <ctype.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,7 +41,7 @@ hash(const char *s)
 
 	h = 0;
 	for (p = (const unsigned char *)s; *p != '\0'; ++p)
-		h = (31 * h) + *p;
+		h = (31 * h) + tolower(*p);
 
 	return (h % NHASH);
 }
@@ -132,7 +133,7 @@ hash_get(struct hash *ht[], const char *name)
 
 	h = hash(name);
 	for (node = ht[h]; node != NULL; node = node->next) {
-		if (strcmp(name, node->name) == 0)
+		if (strcasecmp(name, node->name) == 0)
 			break;
 	}
 

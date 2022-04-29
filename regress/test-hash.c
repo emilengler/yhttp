@@ -28,6 +28,7 @@ struct name_hash {
 
 static void	test_hash(void);
 static void	test_hash_init(void);
+static void	test_hash_get(void);
 static void	test_hash_dump(void);
 static void	test_hash_set(void);
 static void	test_hash_set1(void);
@@ -82,6 +83,24 @@ test_hash_init(void)
 		if (ht[i] != NULL)
 			errx(1, "hash_init: ht[%zu] is not NULL", i);
 	}
+
+	hash_free(ht);
+}
+
+static void
+test_hash_get(void)
+{
+	struct hash	**ht;
+
+	if ((ht = hash_init()) == NULL)
+		err(1, "hash_init");
+
+	if (hash_set(ht, "foo", "bar") != YHTTP_OK)
+		errx(1, "hash_set");
+
+	/* Test case insensitive access. */
+	if (hash_get(ht, "FOO") != hash_get(ht, "foo"))
+		errx(1, "hash_get");
 
 	hash_free(ht);
 }
@@ -255,6 +274,7 @@ main(int argc, char *argv[])
 {
 	test_hash();
 	test_hash_init();
+	test_hash_get();
 	test_hash_dump();
 	test_hash_set();
 	test_hash_unset();
