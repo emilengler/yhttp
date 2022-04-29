@@ -123,7 +123,7 @@ parser_query(struct parser *parser, struct hash *ht[], const char *s,
 		}
 
 		rc = parser_keyvalue(parser, ht, start, end - start);
-		if (rc != YHTTP_OK || parser->state == PARSER_ERR)
+		if (rc != YHTTP_OK || parser->err)
 			return (rc);
 
 		/* Go to the next key/value pair. */
@@ -132,7 +132,6 @@ parser_query(struct parser *parser, struct hash *ht[], const char *s,
 
 	return (YHTTP_OK);
 malformatted:
-	parser->state = PARSER_ERR;
 	parser->err = 400;
 	return (YHTTP_OK);
 }
@@ -180,7 +179,6 @@ parser_keyvalue(struct parser *parser, struct hash *ht[], const char *s,
 
 	return (YHTTP_OK);
 malformatted:
-	parser->state = PARSER_ERR;
 	parser->err = 400;
 	return (YHTTP_OK);
 }
@@ -200,7 +198,6 @@ parser_rline_method(struct parser *parser, const char *s, size_t ns)
 
 	if (methods[i] == NULL) {
 		/* No supported method found. */
-		parser->state = PARSER_ERR;
 		parser->err = 501;
 	} else
 		parser->requ->method = i;
@@ -236,7 +233,6 @@ parser_rline_path(struct parser *parser, const char *s, size_t ns)
 
 	return (YHTTP_OK);
 malformatted:
-	parser->state = PARSER_ERR;
 	parser->err = 400;
 	return (YHTTP_OK);
 }
@@ -266,7 +262,7 @@ parser_rline_target(struct parser *parser, const char *s, size_t ns)
 			return (parser_rline_path(parser, s, ns - 1));
 	} else {
 		rc = parser_rline_path(parser, s, query - s);
-		if (rc != YHTTP_OK || parser->state == PARSER_ERR)
+		if (rc != YHTTP_OK || parser->err)
 			return (rc);
 		return (parser_rline_query(parser, query + 1,
 					   ns - (query - s) - 1));
@@ -327,7 +323,6 @@ parser_header(struct parser *parser, const char *s, size_t ns)
 
 	return (rc);
 malformatted:
-	parser->state = PARSER_ERR;
 	parser->err = 400;
 	return (YHTTP_OK);
 }
@@ -344,7 +339,6 @@ parser_cl(struct parser *parser)
 	if (sscanf(value, "%zu", &parser->requ->nbody) == 1)
 		return (YHTTP_OK);
 	else {
-		parser->state = PARSER_ERR;
 		parser->err = 400;
 		return (YHTTP_OK);
 	}
@@ -385,13 +379,13 @@ parser_rline(struct parser *parser)
 	/* Extract the method. */
 	rc = parser_rline_method(parser, (char *)parser->buf.buf,
 				 spaces[0] - parser->buf.buf);
-	if (rc != YHTTP_OK || parser->state == PARSER_ERR)
+	if (rc != YHTTP_OK || parser->err)
 		goto malformatted;
 
 	/* Extract the target. */
 	rc = parser_rline_target(parser, (char *)spaces[0] + 1,
 				 spaces[1] - spaces[0] - 1);
-	if (rc != YHTTP_OK || parser->state == PARSER_ERR)
+	if (rc != YHTTP_OK || parser->err)
 		goto malformatted;
 
 	/* The HTTP-version can be ignored (for now). */
@@ -403,7 +397,6 @@ parser_rline(struct parser *parser)
 	else
 		return (buf_pop(&parser->buf, len + 1));
 malformatted:
-	parser->state = PARSER_ERR;
 	parser->err = 400;
 	return (YHTTP_OK);
 }
@@ -431,7 +424,7 @@ parser_headers(struct parser *parser)
 			goto malformatted;
 
 		rc = parser_header(parser, (char *)sol, eol - sol);
-		if (rc != YHTTP_OK || parser->state == PARSER_ERR)
+		if (rc != YHTTP_OK || parser->err)
 			return (rc);
 
 		/* Go to the next line. */
@@ -450,7 +443,7 @@ parser_headers(struct parser *parser)
 
 	/* Get the Content-Length. */
 	rc = parser_cl(parser);
-	if (rc != YHTTP_OK || parser->state == PARSER_ERR)
+	if (rc != YHTTP_OK || parser->err)
 		return (rc);
 
 	/* We are done with the header. */
@@ -462,11 +455,9 @@ parser_headers(struct parser *parser)
 
 	return (YHTTP_OK);
 malformatted:
-	parser->state = PARSER_ERR;
 	parser->err = 400;
 	return (YHTTP_OK);
 unsupported:
-	parser->state = PARSER_ERR;
 	parser->err = 501;
 	return (YHTTP_OK);
 }

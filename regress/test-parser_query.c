@@ -51,8 +51,8 @@ main(int argc, char *argv[])
 		rc = parser_query(parser, ht, malformatted_tests[i], strlen(malformatted_tests[i]));
 		if (rc != YHTTP_OK)
 			errx(1, "parser_query: have %d, want YHTTP_OK", rc);
-		if (parser->state != PARSER_ERR)
-			errx(1, "parser_query: have state %d, want PARSER_ERR", parser->state);
+		if (!parser->err)
+			errx(1, "parser_query: want err");
 
 		parser_free(parser);
 		hash_free(ht);
@@ -68,8 +68,8 @@ main(int argc, char *argv[])
 	rc = parser_query(parser, ht, query, strlen(query));
 	if (rc != YHTTP_OK)
 		errx(1, "parser_query: have %d, want YHTTP_OK", rc);
-	if (parser->state == PARSER_ERR)
-		errx(1, "parser_query: have state PARSER_ERR");
+	if (parser->err)
+		errx(1, "parser_query: have err");
 
 	if ((node = hash_get(ht, "foo")) == NULL)
 		errx(1, "parser_query: foo is NULL");

@@ -57,8 +57,8 @@ main(int argc, char *argv[])
 			errx(1, "parser_keyvalue: have %d, want YHTTP_OK", rc);
 
 		if (t->malformatted) {
-			if (parser->state != PARSER_ERR)
-				errx(1, "parser_keyvalue: have state %d, want PARSER_ERR", parser->state);
+			if (!parser->err)
+				errx(1, "parser_keyvalue: want err");
 		} else {
 			if ((node = hash_get(ht, t->key)) == NULL)
 				errx(1, "parser_keyvalue: node is NULL, want not NULL");

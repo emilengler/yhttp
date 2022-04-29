@@ -52,8 +52,8 @@ main(int argc, char *argv[])
 		rc = parser_header(parser, malformatted_tests[i], strlen(malformatted_tests[i]));
 		if (rc != YHTTP_OK)
 			errx(1, "parser_header: have %d, want YHTTP_OK", rc);
-		if (parser->state != PARSER_ERR)
-			errx(1, "parser_header: have state %d, want PARSER_ERR", parser->state);
+		if (!parser->err)
+			errx(1, "parser_header: want err");
 
 		parser_free(parser);
 	}
@@ -66,8 +66,8 @@ main(int argc, char *argv[])
 	rc = parser_header(parser, s, strlen(s));
 	if (rc != YHTTP_OK)
 		errx(1, "parser_header: have %d, want YHTTP_OK", rc);
-	if (parser->state == PARSER_ERR)
-		errx(1, "parser_header: have state PARSER_ERR");
+	if (parser->err)
+		errx(1, "parser_header: have err");
 	if ((v = yhttp_header(parser->requ, "foo")) == NULL)
 		errx(1, "parser_header: FOO is NULL");
 	if (strcmp(v, "bar") != 0)
@@ -78,8 +78,8 @@ main(int argc, char *argv[])
 	rc = parser_header(parser, s, strlen(s));
 	if (rc != YHTTP_OK)
 		errx(1, "parser_header: have %d, want YHTTP_OK", rc);
-	if (parser->state != PARSER_ERR)
-		errx(1, "parser_header: have state %d, want PARSER_ERR", parser->state);
+	if (!parser->err)
+		errx(1, "parser_header: want err");
 
 	parser_free(parser);
 

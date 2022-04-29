@@ -21,9 +21,7 @@ enum parser_state {
 	PARSER_RLINE,	/* Request line. */
 	PARSER_HEADERS,	/* Header fields. */
 	PARSER_BODY,	/* Message body. */
-	PARSER_DONE,	/* Request has been parsed successfully. */
-	/* TODO: Remove PARSER_ERR by err. */
-	PARSER_ERR	/* Request is malformatted. */
+	PARSER_DONE	/* Request has been parsed successfully. */
 };
 
 struct parser {

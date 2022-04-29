@@ -60,11 +60,11 @@ main(int argc, char *argv[])
 			errx(1, "parser_rline_path: have %d, want YHTTP_OK", rc);
 
 		if (t->malformatted) {
-			if (parser->state != PARSER_ERR)
-				errx(1, "parser_rline_path: have state %d, want PARSER_ERR", parser->state);
+			if (!parser->err)
+				errx(1, "parser_rline_path: want err");
 		} else {
-			if (parser->state == PARSER_ERR)
-				errx(1, "parser_rline_path: have state PARSER_ERR");
+			if (parser->err)
+				errx(1, "parser_rline_path: have err");
 			if (strcmp(t->input, parser->requ->path) != 0)
 				errx(1, "parser_rline_path: path not copied");
 		}

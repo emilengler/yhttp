@@ -53,8 +53,8 @@ main(int argc, char *argv[])
 		rc = parser_rline_method(parser, t->input, strlen(t->input));
 		if (rc != YHTTP_OK)
 			errx(1, "parser_rline_method: have %d, want YHTTP_OK", rc);
-		if (parser->state == PARSER_ERR)
-			errx(1, "parser_rline_method: have state PARSER_ERR");
+		if (parser->err)
+			errx(1, "parser_rline_method: have err");
 		if (parser->requ->method != t->output)
 			errx(1, "parser_rline_method: have output %d, want %d", parser->requ->method, t->output);
 
@@ -67,9 +67,9 @@ main(int argc, char *argv[])
 
 	rc = parser_rline_method(parser, "UnKn\0wN", 7);
 	if (rc != YHTTP_OK)
-		errx(1, "parser_rline_method: have state PARSER_ERR");
-	if (parser->state != PARSER_ERR)
-		errx(1, "parser_rline_method: have state %d, want PARSER_ERR", parser->state);
+		errx(1, "parser_rline_method: want YHTTP_OK");
+	if (!parser->err)
+		errx(1, "parser_rline_method: want err");
 
 	parser_free(parser);
 

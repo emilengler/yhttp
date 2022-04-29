@@ -64,11 +64,11 @@ main(int argc, char *argv[])
 			errx(1, "parser_rline_target: have %d, want YHTTP_OK", rc);
 
 		if (t->malformatted) {
-			if (parser->state != PARSER_ERR)
-				errx(1, "parser_rline_target: have state %d, want PARSER_ERR", parser->state);
+			if (!parser->err)
+				errx(1, "parser_rline_target: want err");
 		} else {
-			if (parser->state == PARSER_ERR)
-				errx(1, "parser_rline_target: have state PARSER_ERR");
+			if (parser->err)
+				errx(1, "parser_rline_target: have err");
 			if (strcmp(t->path, parser->requ->path) != 0)
 				errx(1, "parser_rline_target: path was not extracted");
 
