@@ -10,10 +10,10 @@ OBJS	 = yhttp.o	\
 	   parser.o	\
 	   net.o	\
 	   abnf.o
-REGRESS	 = regress/test-init-free		\
-	   regress/test-requ-init-free		\
-	   regress/test-url_enc			\
-	   regress/test-url_dec			\
+REGRESS	 = regress/test-yhttp_init-free		\
+	   regress/test-yhttp_requ-init-free	\
+	   regress/test-yhttp_url_enc		\
+	   regress/test-yhttp_url_dec		\
 	   regress/test-hash			\
 	   regress/test-buf			\
 	   regress/test-parser-init-free	\
@@ -27,8 +27,8 @@ REGRESS	 = regress/test-init-free		\
 	   regress/test-parser_rline		\
 	   regress/test-parser_header		\
 	   regress/test-parser_headers		\
-	   regress/test-resp-init-free		\
-	   regress/test-resp
+	   regress/test-yhttp_resp-init-free	\
+	   regress/test-yhttp_resp
 
 all: libyhttp.a
 
