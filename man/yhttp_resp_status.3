@@ -70,11 +70,11 @@ to
 Passing
 .Dv NULL
 as the value will unset the header field.
-Keep in mind, that certain header fields, most notably those involved in
-the transfer, should not be set by the caller, such as
+The
 .Qq Content-Length
-or
-.Qq Transfer-Encoding .
+as well as the
+.Qq Transfer-Encoding
+header field may not be set by the caller.
 .Pp
 .Fn yhttp_resp_body
 sets the message body of the response to
@@ -84,6 +84,13 @@ Because
 may contain binary data, the caller is required to provide its length through
 .Fa nbody .
 By default, no message body is being used.
+Passing
+.Dv NULL
+as
+.Fa body
+or 0 as
+.Fa nbody
+will unset a previously set message body.
 .Sh RETURN VALUES
 The functions return an integer indicating the error state.
 .Bl -tag -width -Ds
@@ -95,7 +102,14 @@ See
 .Xr errno 2
 for details.
 .It Dv YHTTP_EINVAL
-Invalid arguments supplied.
+Invalid arguments supplied, including
+.Qq Content-Length
+or
+.Qq Transfer-Encoding
+as
+.Fa name
+in
+.Fn yhttp_resp_header .
 .El
 .Sh AUTHORS
 Written by
