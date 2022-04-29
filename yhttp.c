@@ -24,6 +24,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "abnf.h"
 #include "hash.h"
 #include "yhttp.h"
 #include "yhttp-internal.h"
@@ -314,6 +315,90 @@ yhttp_url_dec(const char *s)
 err:
 	free(res);
 	return (NULL);
+}
+
+int
+yhttp_resp_status(struct yhttp_requ *requ, int status)
+{
+	struct yhttp_requ_internal	*internal;
+
+	if (requ == NULL || status < 100 || status > 999)
+		return (YHTTP_EINVAL);
+
+	internal = requ->internal;
+	internal->resp->status = status;
+
+	return (YHTTP_OK);
+}
+
+int
+yhttp_resp_header(struct yhttp_requ *requ, const char *name, const char *value)
+{
+	struct yhttp_requ_internal	*internal;
+	size_t				 i;
+
+	if (requ == NULL || name == NULL)
+		return (YHTTP_EINVAL);
+
+	internal = requ->internal;
+
+	if (value == NULL || *value == '\0') {
+		/* Delete a previously set header field. */
+
+		hash_unset(internal->resp->headers, name);
+		return (YHTTP_OK);
+	} else {
+		/* Set a header field. */
+
+		/* Validate name. */
+		if (*name == '\0')
+			return (YHTTP_EINVAL);
+		for (i = 0; name[i] != '\0'; ++i) {
+			if (!abnf_is_tchar(name[i]))
+				return (YHTTP_EINVAL);
+		}
+		/* Transfer-Encoding and Content-Length may not be set. */
+		if (strcasecmp(name, "Transfer-Encoding") == 0 ||
+		    strcasecmp(name, "Content-Length") == 0)
+			return (YHTTP_EINVAL);
+
+		/* Validate value. */
+		for (i = 0; value[i] != '\0'; ++i) {
+			if (!abnf_is_tchar(value[i]))
+				return (YHTTP_EINVAL);
+		}
+
+		return (hash_set(internal->resp->headers, name, value));
+	}
+}
+
+int
+yhttp_resp_body(struct yhttp_requ *requ, const unsigned char *body,
+		size_t nbody)
+{
+	struct yhttp_requ_internal	*internal;
+
+	if (requ == NULL)
+		return (YHTTP_EINVAL);
+
+	internal = requ->internal;
+	free(internal->resp->body);
+
+	if (body == NULL || nbody == 0) {
+		/* Unset the message body. */
+
+		internal->resp->body = NULL;
+		internal->resp->nbody = 0;
+		return (YHTTP_OK);
+	} else {
+		/* Set the message body. */
+
+		if ((internal->resp->body = malloc(nbody)) == NULL)
+			return (YHTTP_ERRNO);
+		memcpy(internal->resp->body, body, nbody);
+		internal->resp->nbody = nbody;
+		return (YHTTP_OK);
+	}
 }
 
 int
