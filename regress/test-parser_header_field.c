@@ -49,7 +49,7 @@ main(int argc, char *argv[])
 		if ((parser = parser_init()) == NULL)
 			errx(1, "parser_init");
 
-		rc = parser_header(parser, malformatted_tests[i], strlen(malformatted_tests[i]));
+		rc = parser_header_field(parser, malformatted_tests[i], strlen(malformatted_tests[i]));
 		if (rc != YHTTP_OK)
 			errx(1, "parser_header: have %d, want YHTTP_OK", rc);
 		if (!parser->err)
@@ -63,7 +63,7 @@ main(int argc, char *argv[])
 		errx(1, "parser_init");
 
 	s = "FOO: bar";
-	rc = parser_header(parser, s, strlen(s));
+	rc = parser_header_field(parser, s, strlen(s));
 	if (rc != YHTTP_OK)
 		errx(1, "parser_header: have %d, want YHTTP_OK", rc);
 	if (parser->err)
@@ -75,7 +75,7 @@ main(int argc, char *argv[])
 
 	/* Test with duplicate field name. */
 	s = "fOo: bar";
-	rc = parser_header(parser, s, strlen(s));
+	rc = parser_header_field(parser, s, strlen(s));
 	if (rc != YHTTP_OK)
 		errx(1, "parser_header: have %d, want YHTTP_OK", rc);
 	if (!parser->err)

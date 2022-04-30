@@ -46,8 +46,8 @@ static int		 parser_rline_query(struct parser *, const char *,
 static int		 parser_rline_target(struct parser *, const char *,
 					     size_t);
 
-static int		 parser_header(struct parser *, const char *,
-				       size_t);
+static int		 parser_header_field(struct parser *, const char *,
+					     size_t);
 static int		 parser_cl(struct parser *);
 
 static int		 parser_rline(struct parser *);
@@ -270,7 +270,7 @@ parser_rline_target(struct parser *parser, const char *s, size_t ns)
 }
 
 static int
-parser_header(struct parser *parser, const char *s, size_t ns)
+parser_header_field(struct parser *parser, const char *s, size_t ns)
 {
 	struct yhttp_requ_internal	*internal;
 	const char			*colon, *p;
@@ -423,7 +423,7 @@ parser_headers(struct parser *parser)
 		if (memchr(sol, '\0', eol - sol) != NULL)
 			goto malformatted;
 
-		rc = parser_header(parser, (char *)sol, eol - sol);
+		rc = parser_header_field(parser, (char *)sol, eol - sol);
 		if (rc != YHTTP_OK || parser->err)
 			return (rc);
 

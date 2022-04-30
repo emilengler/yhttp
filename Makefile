@@ -26,7 +26,7 @@ REGRESS	 = regress/test-yhttp_init-free		\
 	   regress/test-parser_rline_path	\
 	   regress/test-parser_rline_target	\
 	   regress/test-parser_rline		\
-	   regress/test-parser_header		\
+	   regress/test-parser_header_field	\
 	   regress/test-parser_headers		\
 	   regress/test-yhttp_resp-init-free	\
 	   regress/test-yhttp_resp		\
