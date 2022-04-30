@@ -54,6 +54,7 @@ struct status_code {
 	const char	*reason_phrase;
 };
 
+
 static int	net_handle_accept(struct poll_data *, size_t);
 static int	net_handle_client(struct poll_data *, size_t,
 				  void (*)(struct yhttp_requ *, void *),
@@ -67,12 +68,6 @@ static void	net_poll_del(struct poll_data *, size_t);
 static void	net_poll_close(struct poll_data *, size_t);
 static ssize_t	net_send(int, const unsigned char *, size_t);
 static int	net_socket(int, uint16_t);
-
-static const char		*BAD_REQU = "HTTP/1.1 400 Bad Request\r\n"
-					    "Content-Type: text/plain\r\n"
-					    "Content-Length: 11\r\n"
-					    "\r\n"
-					    "Bad Request";
 
 static struct status_code	 CODES[] = {
 	{ 100, "Continue" },
@@ -182,19 +177,11 @@ net_handle_client(struct poll_data *pd, size_t index,
 		net_poll_close(pd, index);
 	} else {
 		rc = parser_parse(pd->parsers[index], msg, n);
-		if (rc != YHTTP_OK) {
-			net_poll_close(pd, index);
+		if (rc != YHTTP_OK)
 			return (rc);
-		}
 
-		if (pd->parsers[index]->state == PARSER_DONE) {
-			cb(pd->parsers[index]->requ, udata);
-			/* TODO: Handle Connection header field. */
-			net_poll_close(pd, index);
-		} else if (pd->parsers[index]->err) {
-			/* TODO: Respect err. */
-			send(s, BAD_REQU, strlen(BAD_REQU), 0);
-			net_poll_close(pd, index);
+		if (pd->parsers[index]->err) {
+		} else if (pd->parsers[index]->state == PARSER_DONE) {
 		}
 	}
 
