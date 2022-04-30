@@ -1,0 +1,6 @@
+GET /foo?foo=bar&bar&baz=& HTTP/1.1
+Host: example.com
+Content-Length: 13
+User-Agent: curl/7.79.0
+
+Hello, world!
