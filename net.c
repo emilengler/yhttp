@@ -22,6 +22,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <poll.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -64,6 +65,7 @@ static int	net_poll_grow(struct poll_data *);
 static int	net_poll_add(struct poll_data *, int, short);
 static void	net_poll_del(struct poll_data *, size_t);
 static void	net_poll_close(struct poll_data *, size_t);
+static ssize_t	net_send(int, const unsigned char *, size_t);
 static int	net_socket(int, uint16_t);
 
 static const char		*BAD_REQU = "HTTP/1.1 400 Bad Request\r\n"
@@ -334,6 +336,34 @@ net_poll_close(struct poll_data *pd, size_t index)
 	s = pd->pfds[index].fd;
 	net_poll_del(pd, index);
 	close(s);
+}
+
+/*
+ * Send large amounts of data.
+ */
+static ssize_t
+net_send(int s, const unsigned char *data, size_t ndata)
+{
+	ssize_t	n;
+	size_t	sent;
+
+	sent = 0;
+	do {
+		n = send(s, data + sent, ndata - sent, 0);
+		if (n <= 0)
+			return (n);
+
+		/* Integer overflow check. */
+		if (SIZE_MAX - (size_t)n < sent)
+			return (-1);
+		sent += n;
+	} while (sent != ndata);
+
+	/* Unlikely but it's better to go safe. */
+	if (sent > SSIZE_MAX)
+		return (-1);
+
+	return (sent);
 }
 
 static int
