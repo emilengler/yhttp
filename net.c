@@ -33,6 +33,7 @@
 #include "parser.h"
 #include "yhttp.h"
 #include "net.h"
+#include "util.h"
 
 #define NGROW	128
 
@@ -68,6 +69,7 @@ static void	net_poll_del(struct poll_data *, size_t);
 static void	net_poll_close(struct poll_data *, size_t);
 static ssize_t	net_send(int, const unsigned char *, size_t);
 static int	net_socket(int, uint16_t);
+static int	net_resp_err(int, int);
 
 static struct status_code	 CODES[] = {
 	{ 100, "Continue" },
@@ -400,6 +402,38 @@ net_socket(int domain, uint16_t port)
 err:
 	close(s);
 	return (YHTTP_ERRNO);
+}
+
+static int
+net_resp_err(int s, int err)
+{
+	const char	*rp;
+	char		*resp;
+	ssize_t		 n;
+	size_t		 i;
+
+	/* Find the reason-phrase. */
+	for (i = 0; CODES[i].code != 0; ++i) {
+		if (CODES[i].code == err)
+			break;
+	}
+	rp = CODES[i].reason_phrase;
+
+	/* Format the response. */
+	resp = util_aprintf("HTTP/1.1 %d %s\r\n"
+			    "Content-Length: %zu\r\n"
+			    "\r\n"
+			    "%s",
+			    err, rp, strlen(rp), rp);
+	if (resp == NULL)
+		return (YHTTP_ERRNO);
+
+	n = net_send(s, (unsigned char *)resp, strlen(resp));
+	free(resp);
+	if (n <= 0)
+		return (YHTTP_ERRNO);
+
+	return (YHTTP_OK);
 }
 
 int
