@@ -53,6 +53,7 @@ static int	net_handle_accept(struct poll_data *, size_t);
 static int	net_handle_client(struct poll_data *, size_t,
 				  void (*)(struct yhttp_requ *, void *),
 				  void *);
+static int	net_is_keep_alive(struct yhttp_requ *);
 static int	net_nonblock(int);
 static void	net_poll_init(struct poll_data *);
 static void	net_poll_free(struct poll_data *);
@@ -120,6 +121,18 @@ net_handle_client(struct poll_data *pd, size_t index,
 	}
 
 	return (YHTTP_OK);
+}
+
+static int
+net_is_keep_alive(struct yhttp_requ *requ)
+{
+	char	*value;
+
+	value = yhttp_header(requ, "Connection");
+	if (value != NULL && strcmp(value, "keep-alive") == 0)
+		return (1);
+	else
+		return (0);
 }
 
 static int
