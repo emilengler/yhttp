@@ -10,7 +10,8 @@ OBJS	 = yhttp.o	\
 	   parser.o	\
 	   net.o	\
 	   abnf.o	\
-	   util.o
+	   util.o	\
+	   resp.o
 REGRESS	 = regress/test-yhttp_init-free		\
 	   regress/test-yhttp_requ-init-free	\
 	   regress/test-yhttp_url_enc		\
