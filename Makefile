@@ -31,8 +31,7 @@ REGRESS	 = regress/test-yhttp_init-free		\
 	   regress/test-parser_headers		\
 	   regress/test-yhttp_resp-init-free	\
 	   regress/test-yhttp_resp		\
-	   regress/test-util_aprintf		\
-	   regress/test-resp_fmt
+	   regress/test-util_aprintf
 
 all: libyhttp.a
 

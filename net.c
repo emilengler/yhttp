@@ -32,6 +32,8 @@
 #include "buf.h"
 #include "parser.h"
 #include "yhttp.h"
+#include "yhttp-internal.h"
+#include "resp.h"
 #include "net.h"
 
 #define NGROW	128
@@ -63,11 +65,6 @@ static void	net_poll_del(struct poll_data *, size_t);
 static void	net_poll_close(struct poll_data *, size_t);
 static int	net_socket(int, uint16_t);
 
-static const char		*BAD_REQU = "HTTP/1.1 400 Bad Request\r\n"
-					    "Content-Type: text/plain\r\n"
-					    "Content-Length: 11\r\n"
-					    "\r\n"
-					    "Bad Request";
 static int
 net_handle_accept(struct poll_data *pd, size_t index)
 {
@@ -89,15 +86,16 @@ static int
 net_handle_client(struct poll_data *pd, size_t index,
 		  void (*cb)(struct yhttp_requ *, void *), void *udata)
 {
-	unsigned char	msg[4096];
-	ssize_t		n;
-	int		rc, s;
+	struct yhttp_requ_internal	*internal;
+	unsigned char			 msg[4096];
+	size_t				 n;
+	int				 rc, s;
 
 	s = pd->pfds[index].fd;
 
 	n = recv(s, msg, sizeof(msg), 0);
 	if (n <= 0) {
-		if (errno == EAGAIN)
+		if (n < 0 && errno == EAGAIN)
 			return (YHTTP_OK);
 
 		/* Connection was closed or error occurred. */
@@ -109,14 +107,16 @@ net_handle_client(struct poll_data *pd, size_t index,
 			return (rc);
 		}
 
-		if (pd->parsers[index]->state == PARSER_DONE) {
+		if (pd->parsers[index]->err) {
+			if (resp_err(s, pd->parsers[index]->err) != YHTTP_OK)
+				net_poll_close(pd, index);
+			/* TODO: Respect the Connection header field. */
+		} else if (pd->parsers[index]->state == PARSER_DONE) {
+			internal = pd->parsers[index]->requ->internal;
 			cb(pd->parsers[index]->requ, udata);
-			/* TODO: Handle Connection header field. */
-			net_poll_close(pd, index);
-		} else if (pd->parsers[index]->err) {
-			/* TODO: Respect err. */
-			send(s, BAD_REQU, strlen(BAD_REQU), 0);
-			net_poll_close(pd, index);
+			if (resp(s, internal->resp) != YHTTP_OK)
+				net_poll_close(pd, index);
+			/* TODO: Respect the Connection header field. */
 		}
 	}
 
