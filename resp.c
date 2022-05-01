@@ -34,6 +34,7 @@ struct status_rp {
 static const char	*resp_find_rp(int);
 static char		*resp_fmt_rline(int);
 static char		*resp_fmt_header(struct hash *);
+static char		*resp_fmt_err(int);
 static int		 resp_transmit_rline(int, int);
 static int		 resp_transmit_headers(int, struct yhttp_resp *);
 static int		 resp_transmit_body(int, struct yhttp_resp *);
@@ -139,6 +140,20 @@ resp_fmt_header(struct hash *node)
 	return (util_aprintf("%s: %s\r\n", node->name, node->value));
 }
 
+static char *
+resp_fmt_err(int status)
+{
+	const char	*rp;
+
+	rp = resp_find_rp(status);
+
+	return (util_aprintf("HTTP/1.1 %d %s\r\n"
+			     "Content-Length: %zu\r\n"
+			     "\r\n"
+			     "%s",
+			     status, rp, strlen(rp), rp));
+}
+
 static int
 resp_transmit_rline(int s, int status)
 {
@@ -221,6 +236,25 @@ resp(int s, struct yhttp_resp *resp)
 		return (rc);
 	if ((rc = resp_transmit_body(s, resp)) != YHTTP_OK)
 		return (rc);
+
+	return (YHTTP_OK);
+}
+
+int
+resp_err(int s, int status)
+{
+	char	*resp;
+	ssize_t	 n;
+	size_t	 len;
+
+	if ((resp = resp_fmt_err(status)) == NULL)
+		return (YHTTP_ERRNO);
+	len = strlen(resp);
+
+	n = net_send(s, (unsigned char *)resp, len);
+	free(resp);
+	if (n <= 0 || (size_t)n != len)
+		return (YHTTP_ERRNO);
 
 	return (YHTTP_OK);
 }

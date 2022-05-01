@@ -25,6 +25,7 @@
 
 static void	test_resp_fmt_rline(void);
 static void	test_resp_fmt_header(void);
+static void	test_resp_fmt_err(void);
 
 static void
 test_resp_fmt_rline(void)
@@ -60,10 +61,29 @@ test_resp_fmt_header(void)
 	free(header);
 }
 
+static void
+test_resp_fmt_err(void)
+{
+	const char	*bad_requ;
+	char		*resp;
+
+	bad_requ = "HTTP/1.1 400 Bad Request\r\n"
+		   "Content-Length: 11\r\n"
+		   "\r\n"
+		   "Bad Request";
+
+	if ((resp = resp_fmt_err(400)) == NULL)
+		errx(1, "resp_fmt_err");
+	if (strcmp(resp, bad_requ) != 0)
+		errx(1, "resp_fmt_err: have %s, want %s", resp, bad_requ);
+	free(resp);
+}
+
 int
 main(int argc, char *argv[])
 {
 	test_resp_fmt_rline();
 	test_resp_fmt_header();
+	test_resp_fmt_err();
 	return (0);
 }
