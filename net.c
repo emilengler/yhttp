@@ -30,10 +30,13 @@
 #include <unistd.h>
 
 #include "buf.h"
+#include "hash.h"
 #include "parser.h"
 #include "yhttp.h"
 #include "net.h"
 #include "util.h"
+#include "yhttp.h"
+#include "yhttp-internal.h"
 
 #define NGROW	128
 
@@ -69,6 +72,7 @@ static void	net_poll_del(struct poll_data *, size_t);
 static void	net_poll_close(struct poll_data *, size_t);
 static ssize_t	net_send(int, const unsigned char *, size_t);
 static int	net_socket(int, uint16_t);
+static int	net_resp(int, struct yhttp_resp *);
 static int	net_resp_err(int, int);
 
 static struct status_code	 CODES[] = {
@@ -402,6 +406,77 @@ net_socket(int domain, uint16_t port)
 err:
 	close(s);
 	return (YHTTP_ERRNO);
+}
+
+static int
+net_resp(int s, struct yhttp_resp *resp)
+{
+	struct hash	**headers;
+	const char	 *rp;
+	char		 *rline, *header;
+	ssize_t		  n;
+	size_t		  i;
+
+	/* Find the reason-phrase. */
+	for (i = 0; CODES[i].code != 0; ++i) {
+		if (CODES[i].code == resp->status)
+			break;
+	}
+	rp = CODES[i].reason_phrase;
+
+	/* Format the rline. */
+	rline = util_aprintf("HTTP/1.1 %d %s\r\n", resp->status, rp);
+	if (rline == NULL)
+		return (YHTTP_ERRNO);
+
+	/* Transmit the rline. */
+	n = net_send(s, (unsigned char *)rline, strlen(rline));
+	free(rline);
+	if (n <= 0)
+		return (YHTTP_ERRNO);
+
+	/* Dump the header fields. */
+	headers = hash_dump(resp->headers);
+	if (headers == NULL)
+		return (YHTTP_ERRNO);
+
+	/* Transmit the header fields. */
+	for (i = 0; headers[i] != NULL; ++i) {
+		/* Format the header field. */
+		header = util_aprintf("%s: %s", headers[i]->name,
+				      headers[i]->value);
+		if (header == NULL) {
+			free(headers);
+			return (YHTTP_ERRNO);
+		}
+
+		/* Transmit the header field. */
+		n = net_send(s, (unsigned char *)header, strlen(header));
+		free(header);
+		if (n <= 0) {
+			free(headers);
+			return (YHTTP_ERRNO);
+		}
+	}
+	free(headers);
+
+	/* Format the Content-Length field with the end of the header. */
+	header = util_aprintf("Content-Length: %zu\r\n\r\n", resp->nbody);
+	if (header == NULL)
+		return (YHTTP_ERRNO);
+
+	/* Transmit the Content-Length and the end of the header. */
+	n = net_send(s, (unsigned char *)header, strlen(header));
+	free(header);
+	if (n <= 0)
+		return (YHTTP_ERRNO);
+
+	/* Transmit the message body. */
+	n = net_send(s, resp->body, resp->nbody);
+	if (n <= 0)
+		return (YHTTP_ERRNO);
+
+	return (YHTTP_OK);
 }
 
 static int
