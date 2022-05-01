@@ -27,12 +27,10 @@ static const char	*malformatted_tests[] = {
 	"foo",
 	"f:",
 	"f: ",
-	"f:  ",
 	":",
 	": ",
 	":   ",
 	": f",
-	"foo: b[r",
 	NULL
 };
 

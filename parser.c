@@ -277,6 +277,8 @@ parser_header_field(struct parser *parser, const char *s, size_t ns)
 	char				*name, *value;
 	int				 rc;
 
+	/* TODO: Trim the OWS. */
+
 	if ((colon = memchr(s, ':', ns)) == NULL)
 		goto malformatted;
 
@@ -291,7 +293,7 @@ parser_header_field(struct parser *parser, const char *s, size_t ns)
 	}
 	/* Validate the field-value. */
 	for (p = colon + 2; p != s + ns; ++p) {
-		if (!abnf_is_tchar(*p))
+		if (!isprint(*p))
 			goto malformatted;
 	}
 
