@@ -102,9 +102,9 @@ cb(struct yhttp_requ *requ, void *unused)
 	resp = "Love has a nasty habit of disappearing overnight";
 
 	/* Not required, because 200 is the default status code anyway. */
-	yhttp_requ_status(requ, 200);
-	yhttp_requ_header(requ, "Content-Type", "text/plain");
-	yhttp_requ_body(requ, resp, strlen(resp));
+	yhttp_resp_status(requ, 200);
+	yhttp_resp_header(requ, "Content-Type", "text/plain");
+	yhttp_resp_body(requ, resp, strlen(resp));
 }
 
 static void
@@ -130,7 +130,7 @@ main(void)
 		errx(1, "yhttp_dispatch");
 
 	/* Clean the resources up and exit the application. */
-	yhttp_free(&yp);
+	yhttp_free(&yh);
 	return (0);
 }
 .Ed
