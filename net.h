@@ -19,5 +19,6 @@
 
 int	net_dispatch(uint16_t, int, void (*)(struct yhttp_requ *, void *),
 		     void *);
+ssize_t	net_send(int, const unsigned char *, size_t);
 
 #endif
