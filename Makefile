@@ -33,10 +33,10 @@ REGRESS	 = regress/test-yhttp_init-free		\
 	   regress/test-yhttp_resp		\
 	   regress/test-util_aprintf
 
-all: libyhttp.a
+all: libyhttp.a yhttpd
 
 clean:
-	rm -f libyhttp.a ${OBJS} ${REGRESS}
+	rm -f libyhttp.a yhttpd ${OBJS} ${REGRESS}
 
 regress: all ${REGRESS}
 	@for f in ${REGRESS}; do	\
@@ -46,3 +46,6 @@ regress: all ${REGRESS}
 
 libyhttp.a: ${OBJS}
 	${AR} rcs $@ ${OBJS}
+
+yhttpd: libyhttp.a yhttpd.c
+	${CC} ${CFLAGS} -o $@ yhttpd.c -L. -lyhttp
