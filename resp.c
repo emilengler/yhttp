@@ -16,14 +16,29 @@
 
 #include <sys/types.h>
 
-#include "resp.h"
+#include <stdlib.h>
+#include <string.h>
 
-struct status_code {
-	int		 code;
+#include "hash.h"
+#include "yhttp.h"
+#include "yhttp-internal.h"
+#include "net.h"
+#include "resp.h"
+#include "util.h"
+
+struct status_rp {
+	int		 status;
 	const char	*reason_phrase;
 };
 
-static struct status_code	CODES[] = {
+static const char	*resp_find_rp(int);
+static char		*resp_fmt_rline(int);
+static char		*resp_fmt_header(struct hash *);
+static int		 resp_transmit_rline(int, int);
+static int		 resp_transmit_headers(int, struct yhttp_resp *);
+static int		 resp_transmit_body(int, struct yhttp_resp *);
+
+static struct status_rp	CODES[] = {
 	{ 100, "Continue" },
 	{ 101, "Switching Protocols" },
 	{ 102, "Processing" },
@@ -94,3 +109,118 @@ static struct status_code	CODES[] = {
 
 	{ 0, "NULL" }
 };
+
+static const char *
+resp_find_rp(int status)
+{
+	size_t	i;
+
+	for (i = 0; CODES[i].status != 0; ++i) {
+		if (CODES[i].status == status)
+			break;
+	}
+
+	return (CODES[i].reason_phrase);
+}
+
+static char *
+resp_fmt_rline(int status)
+{
+	const char	*rp;
+
+	rp = resp_find_rp(status);
+
+	return (util_aprintf("HTTP/1.1 %d %s\r\n", status, rp));
+}
+
+static char *
+resp_fmt_header(struct hash *node)
+{
+	return (util_aprintf("%s: %s\r\n", node->name, node->value));
+}
+
+static int
+resp_transmit_rline(int s, int status)
+{
+	char	*rline;
+	ssize_t	 n;
+	size_t	 len;
+
+	if ((rline = resp_fmt_rline(status)) == NULL)
+		return (YHTTP_ERRNO);
+	len = strlen(rline);
+	n = net_send(s, (unsigned char *)rline, len);
+	if (n <= 0 || (size_t)n != len)
+		return (YHTTP_ERRNO);
+
+	return (YHTTP_OK);
+}
+
+static int
+resp_transmit_headers(int s, struct yhttp_resp *resp)
+{
+	struct hash	**headers;
+	char		 *header;
+	ssize_t		  n;
+	size_t		  i, len;
+
+	if ((headers = hash_dump(resp->headers)) == NULL)
+		return (YHTTP_ERRNO);
+
+	/* Format and transmit all header fields. */
+	for (i = 0; headers[i] != NULL; ++i) {
+		if ((header = resp_fmt_header(headers[i])) == NULL) {
+			free(headers);
+			return (YHTTP_ERRNO);
+		}
+		len = strlen(header);
+
+		n = net_send(s, (unsigned char *)header, len);
+		free(header);
+		if (n <= 0 || (size_t)n != len) {
+			free(headers);
+			return (YHTTP_ERRNO);
+		}
+	}
+	free(headers);
+
+	/* Format and transmit the Content-Length header field. */
+	header = util_aprintf("Content-Length: %zu\r\n\r\n", resp->nbody);
+	if (header == NULL)
+		return (YHTTP_ERRNO);
+	len = strlen(header);
+
+	n = net_send(s, (unsigned char *)header, len);
+	free(header);
+	if (n <= 0 || (size_t)n != len)
+		return (YHTTP_ERRNO);
+
+	return (YHTTP_OK);
+}
+
+static int
+resp_transmit_body(int s, struct yhttp_resp *resp)
+{
+	ssize_t	n;
+
+	n = net_send(s, resp->body, resp->nbody);
+	if (n <= 0 || (size_t)n != resp->nbody)
+		return (YHTTP_ERRNO);
+
+	return (YHTTP_OK);
+}
+
+int
+resp(int s, struct yhttp_resp *resp)
+{
+	int	rc;
+
+	if ((rc = resp_transmit_rline(s, resp->status)) != YHTTP_OK)
+		return (rc);
+	if ((rc = resp_transmit_headers(s, resp)) != YHTTP_OK)
+		return (rc);
+	if ((rc = resp_transmit_body(s, resp)) != YHTTP_OK)
+		return (rc);
+
+	return (YHTTP_OK);
+}

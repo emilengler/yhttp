@@ -17,4 +17,6 @@
 #ifndef RESP_H
 #define RESP_H
 
+int	resp(int, struct yhttp_resp *);
+
 #endif
