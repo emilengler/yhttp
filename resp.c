@@ -165,6 +165,7 @@ resp_transmit_rline(int s, int status)
 		return (YHTTP_ERRNO);
 	len = strlen(rline);
 	n = net_send(s, (unsigned char *)rline, len);
+	free(rline);
 	if (n <= 0 || (size_t)n != len)
 		return (YHTTP_ERRNO);
 
