@@ -45,13 +45,13 @@ static int		 parser_rline_query(struct parser *, const char *,
 					    size_t);
 static int		 parser_rline_target(struct parser *, const char *,
 					     size_t);
+static int		 parser_rline(struct parser *);
 
 static int		 parser_header_field(struct parser *, const char *,
 					     size_t);
-static int		 parser_cl(struct parser *);
-
-static int		 parser_rline(struct parser *);
 static int		 parser_headers(struct parser *);
+
+static int		 parser_cl(struct parser *);
 static int		 parser_body(struct parser *);
 
 /* String associations for methods with their enum yhttp_method. */
@@ -270,6 +270,63 @@ parser_rline_target(struct parser *parser, const char *s, size_t ns)
 }
 
 static int
+parser_rline(struct parser *parser)
+{
+	unsigned char	*eol, *p, *spaces[2];
+	size_t		 len;
+	int		 i, rc;
+
+	if (parser->buf.used == 0)
+		return (YHTTP_OK);
+
+	eol = parser_find_eol(parser->buf.buf, parser->buf.used);
+	if (eol == NULL)
+		return (YHTTP_OK);
+	len = eol - parser->buf.buf;
+
+	/* Check for ASCII '\0'. */
+	if (memchr(parser->buf.buf, '\0', len) != NULL)
+		goto malformatted;
+
+	/* Get the two spaces. */
+	i = 0;
+	for (p = parser->buf.buf; p != eol && i < 2; ++p) {
+		if (*p == ' ')
+			spaces[i++] = p;
+	}
+	if (i != 2)
+		goto malformatted;
+
+	/* Check the position of the two spaces. */
+	if (spaces[0] == parser->buf.buf || spaces[1] == eol - 1)
+		goto malformatted;
+
+	/* Extract the method. */
+	rc = parser_rline_method(parser, (char *)parser->buf.buf,
+				 spaces[0] - parser->buf.buf);
+	if (rc != YHTTP_OK || parser->err)
+		goto malformatted;
+
+	/* Extract the target. */
+	rc = parser_rline_target(parser, (char *)spaces[0] + 1,
+				 spaces[1] - spaces[0] - 1);
+	if (rc != YHTTP_OK || parser->err)
+		goto malformatted;
+
+	/* The HTTP-version can be ignored (for now). */
+
+	/* We are done with the rline. */
+	parser->state = PARSER_HEADERS;
+	if (*eol == '\r')
+		return (buf_pop(&parser->buf, len + 2));
+	else
+		return (buf_pop(&parser->buf, len + 1));
+malformatted:
+	parser->err = 400;
+	return (YHTTP_OK);
+}
+
+static int
 parser_header_field(struct parser *parser, const char *s, size_t ns)
 {
 	struct yhttp_requ_internal	*internal;
@@ -324,80 +381,6 @@ parser_header_field(struct parser *parser, const char *s, size_t ns)
 		return (rc);
 
 	return (rc);
-malformatted:
-	parser->err = 400;
-	return (YHTTP_OK);
-}
-
-static int
-parser_cl(struct parser *parser)
-{
-	const char	*value;
-
-	/* Check if a "Content-Length" header field has been supplied. */
-	if ((value = yhttp_header(parser->requ, "Content-Length")) == NULL)
-		return (YHTTP_OK);
-
-	if (sscanf(value, "%zu", &parser->requ->nbody) == 1)
-		return (YHTTP_OK);
-	else {
-		parser->err = 400;
-		return (YHTTP_OK);
-	}
-}
-
-static int
-parser_rline(struct parser *parser)
-{
-	unsigned char	*eol, *p, *spaces[2];
-	size_t		 len;
-	int		 i, rc;
-
-	if (parser->buf.used == 0)
-		return (YHTTP_OK);
-
-	eol = parser_find_eol(parser->buf.buf, parser->buf.used);
-	if (eol == NULL)
-		return (YHTTP_OK);
-	len = eol - parser->buf.buf;
-
-	/* Check for ASCII '\0'. */
-	if (memchr(parser->buf.buf, '\0', len) != NULL)
-		goto malformatted;
-
-	/* Get the two spaces. */
-	i = 0;
-	for (p = parser->buf.buf; p != eol && i < 2; ++p) {
-		if (*p == ' ')
-			spaces[i++] = p;
-	}
-	if (i != 2)
-		goto malformatted;
-
-	/* Check the position of the two spaces. */
-	if (spaces[0] == parser->buf.buf || spaces[1] == eol - 1)
-		goto malformatted;
-
-	/* Extract the method. */
-	rc = parser_rline_method(parser, (char *)parser->buf.buf,
-				 spaces[0] - parser->buf.buf);
-	if (rc != YHTTP_OK || parser->err)
-		goto malformatted;
-
-	/* Extract the target. */
-	rc = parser_rline_target(parser, (char *)spaces[0] + 1,
-				 spaces[1] - spaces[0] - 1);
-	if (rc != YHTTP_OK || parser->err)
-		goto malformatted;
-
-	/* The HTTP-version can be ignored (for now). */
-
-	/* We are done with the rline. */
-	parser->state = PARSER_HEADERS;
-	if (*eol == '\r')
-		return (buf_pop(&parser->buf, len + 2));
-	else
-		return (buf_pop(&parser->buf, len + 1));
 malformatted:
 	parser->err = 400;
 	return (YHTTP_OK);
@@ -462,6 +445,23 @@ malformatted:
 unsupported:
 	parser->err = 501;
 	return (YHTTP_OK);
+}
+
+static int
+parser_cl(struct parser *parser)
+{
+	const char	*value;
+
+	/* Check if a "Content-Length" header field has been supplied. */
+	if ((value = yhttp_header(parser->requ, "Content-Length")) == NULL)
+		return (YHTTP_OK);
+
+	if (sscanf(value, "%zu", &parser->requ->nbody) == 1)
+		return (YHTTP_OK);
+	else {
+		parser->err = 400;
+		return (YHTTP_OK);
+	}
 }
 
 static int
