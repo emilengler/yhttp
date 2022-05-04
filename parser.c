@@ -305,7 +305,7 @@ static int
 parser_rline(struct parser *parser)
 {
 	unsigned char	*eol, *p, *spaces[2];
-	size_t		 len;
+	size_t		 len, methodlen, targetlen;
 	int		 i, rc;
 
 	if (parser->buf.used == 0)
@@ -329,19 +329,24 @@ parser_rline(struct parser *parser)
 	if (i != 2)
 		goto malformatted;
 
-	/* Check the position of the two spaces. */
+	/*
+	 * Check the position of the two spaces.  They may not occur as the
+	 * first character in the line, nor as the last character.
+	 */
 	if (spaces[0] == parser->buf.buf || spaces[1] == eol - 1)
 		goto malformatted;
 
 	/* Extract the method. */
-	rc = parser_rline_method(parser, (char *)parser->buf.buf,
-				 spaces[0] - parser->buf.buf);
+	/* From the start of the line to the first space. */
+	methodlen = spaces[0] - parser->buf.buf;
+	rc = parser_rline_method(parser, (char *)parser->buf.buf, methodlen);
 	if (rc != YHTTP_OK || parser->err)
 		goto malformatted;
 
 	/* Extract the target. */
-	rc = parser_rline_target(parser, (char *)spaces[0] + 1,
-				 spaces[1] - spaces[0] - 1);
+	/* From the character after the first space until the second space. */
+	targetlen = spaces[1] - spaces[0] - 1;
+	rc = parser_rline_target(parser, (char *)spaces[0] + 1, targetlen);
 	if (rc != YHTTP_OK || parser->err)
 		goto malformatted;
 
