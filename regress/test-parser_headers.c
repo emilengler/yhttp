@@ -23,9 +23,9 @@
 
 #include "../parser.c"
 
-static const char	*test = "Foo: Bar\n"
-				"Bar: Foo\r\n"
-				"foz: baz\n"
+static const char	*test = "Foo:Bar\n"
+				"Bar: Foo \r\n"
+				"foz:baz     \n"
 				"\r\n"
 				"foo";
 

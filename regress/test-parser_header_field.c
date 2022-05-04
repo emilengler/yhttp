@@ -60,7 +60,7 @@ main(int argc, char *argv[])
 	if ((parser = parser_init()) == NULL)
 		errx(1, "parser_init");
 
-	s = "FOO: bar";
+	s = "FOO:    bar    ";
 	rc = parser_header_field(parser, s, strlen(s));
 	if (rc != YHTTP_OK)
 		errx(1, "parser_header: have %d, want YHTTP_OK", rc);

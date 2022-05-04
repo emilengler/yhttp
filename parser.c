@@ -367,68 +367,72 @@ static int
 parser_header_field(struct parser *parser, const char *s, size_t ns)
 {
 	struct yhttp_requ_internal	*internal;
-	const char			*colon, *p;
+	const char			*colon, *name_start, *value_start;
 	char				*name, *value;
-	size_t				 namelen, valuelen;
+	size_t				 i, namelen, valuelen;
 	int				 rc;
-
-	/* TODO: Trim the OWS. */
 
 	if ((colon = memchr(s, ':', ns)) == NULL)
 		goto malformatted;
 
-	/*
-	 * Validate the general structure, by checking if the colon is at the
-	 * correct position (not the start), followed by a space and has a value
-	 * after that space.
-	 */
-	if (colon == s || colon + 2 >= s + ns || colon[1] != ' ')
+	/* Validate the name. */
+	name_start = s;
+	namelen = colon - name_start;
+	if (namelen == 0)
 		goto malformatted;
-
-	/* Validate the field-name. */
-	for (p = s; p != colon; ++p) {
-		if (!abnf_is_tchar(*p))
-			goto malformatted;
-	}
-	/* Validate the field-value. */
-	for (p = colon + 2; p != s + ns; ++p) {
-		if (!isprint(*p))
+	for (i = 0; i < namelen; ++i) {
+		if (!abnf_is_tchar(name_start[i]))
 			goto malformatted;
 	}
 
-	/* Extract the field-name and convert it to lower-case. */
-	namelen = colon - s;
-	if ((name = strndup(s, namelen)) == NULL)
-		return (YHTTP_ERRNO);
+	/* "Find" the start of the value (skipping OWS). */
+	for (i = namelen + 1; i < ns; ++i) {
+		if (s[i] != ' ')
+			break;
+	}
+	if (i >= ns) {
+		/* The value only consists of OWS. */
+		goto malformatted;
+	}
+	value_start = s + i;
 
-	/* Extract the field-value. */
 	/*
-	 * The valuelen is being composed by calculating the length of the
-	 * length of the string from two characters after the colon up until the
-	 * end of the string.
+	 * "Find" the end of the value, by traversing s from behind, until a
+	 * character unequal to ' ' has been found.
 	 */
-	valuelen = ns - (colon - s) - 2;
-	if ((value = strndup(colon + 2, valuelen)) == NULL) {
-		free(name);
-		return (YHTTP_ERRNO);
+	for (i = ns; s[i - 1] == ' '; --i);
+	valuelen = i - (value_start - s);
+	assert(valuelen > 0);
+
+	/* Validate the value. */
+	for (i = 0; i < valuelen; ++i) {
+		if (!isprint(value_start[i]))
+			goto malformatted;
 	}
 
-	internal = parser->requ->internal;
+	/* Extract the name and the value. */
+	name = NULL;
+	value = NULL;
+	name = strndup(name_start, namelen);
+	value = strndup(value_start, valuelen);
+	if (name == NULL || value == NULL) {
+		free(name);
+		free(value);
+		return (YHTTP_ERRNO);
+	}
 
 	/* Check if a header field with name is already present. */
-	if (hash_get(internal->headers, name) != NULL) {
+	if (yhttp_header(parser->requ, name) != NULL) {
 		free(name);
 		free(value);
 		goto malformatted;
 	}
 
 	/* Insert the header field into the hash table. */
+	internal = parser->requ->internal;
 	rc = hash_set(internal->headers, name, value);
 	free(name);
 	free(value);
-	if (rc != YHTTP_OK)
-		return (rc);
-
 	return (rc);
 malformatted:
 	parser->err = 400;
@@ -439,15 +443,15 @@ static int
 parser_headers(struct parser *parser)
 {
 	unsigned char	*sol, *eol;
-	size_t		 remaining, linelen;
+	size_t		 remaining, parsed, linelen;
 	int		 rc;
 
 	if (parser->buf.used == 0)
 		return (YHTTP_OK);
 
-	/* Parse the header fields line by line. */
+	/* Parse the header fields line by line, until the empty line. */
 	sol = parser->buf.buf;
-	do {
+	while (1) {
 		/*
 		 * The remaining value is being composed by subtracting the
 		 * amount of already parsed data from the amount of the totally
@@ -455,14 +459,25 @@ parser_headers(struct parser *parser)
 		 */
 		remaining = parser->buf.used - (sol - parser->buf.buf);
 		eol = parser_find_eol(sol, remaining);
-		if (eol == NULL)
+		if (eol == NULL) {
+			/*
+			 * No eol means, that the line has not been fully
+			 * received yet.  Wait for more input.
+			 */
 			return (YHTTP_OK);
+		} else if (eol == sol) {
+			/*
+			 * We have reached the empty line, meaning that the end
+			 * of the header has been reached.
+			 */
+			break;
+		}
+		linelen = eol - sol;
 
 		/* Check for ASCII '\0'. */
-		if (memchr(sol, '\0', eol - sol) != NULL)
+		if (memchr(sol, '\0', linelen) != 0)
 			goto malformatted;
 
-		linelen = eol - sol;
 		rc = parser_header_field(parser, (char *)sol, linelen);
 		if (rc != YHTTP_OK || parser->err)
 			return (rc);
@@ -472,7 +487,7 @@ parser_headers(struct parser *parser)
 			sol = eol + 2;
 		else
 			sol = eol + 1;
-	} while (!(*sol == '\r' || *sol == '\n'));
+	}
 
 	/*
 	 * Check if a Transfer-Encoding has been supplied, which we do not
@@ -488,10 +503,8 @@ parser_headers(struct parser *parser)
 
 	/* We are done with the header. */
 	parser->state = PARSER_BODY;
-	if (*sol == '\r')
-		return (buf_pop(&parser->buf, (sol - parser->buf.buf) + 2));
-	else
-		return (buf_pop(&parser->buf, (sol - parser->buf.buf) + 1));
+	parsed = (sol - parser->buf.buf);
+	return (buf_pop(&parser->buf, *sol == '\r' ? parsed + 2 : parsed + 1));
 malformatted:
 	parser->err = 400;
 	return (YHTTP_OK);
