@@ -145,6 +145,7 @@ parser_keyvalue(struct parser *parser, struct hash *ht[], const char *s,
 {
 	const char	*equal;
 	char		*key, *value;
+	size_t		 keylen, valuelen;
 	int		 has_value;
 	int		 rc;
 
@@ -161,12 +162,21 @@ parser_keyvalue(struct parser *parser, struct hash *ht[], const char *s,
 
 	/* Extract the key and the value. */
 	if (has_value) {
-		key = strndup(s, equal - s);
-		value = strndup(equal + 1, ((s + ns) - equal) - 1);
+		keylen = equal - s;
+		/*
+		 * The valuelen is being composed by calculating the length of
+		 * the string from the equal sign up until the end of the
+		 * string.  The -1 is necessary because the equal sign itself
+		 * should not be a part of the value.
+		 */
+		valuelen = ((s + ns) - equal) - 1;
 	} else {
-		key = strndup(s, ns);
-		value = strdup("");
+		keylen = ns;
+		valuelen = 0;
 	}
+
+	key = strndup(s, keylen);
+	value = strndup(equal + 1, valuelen);
 	if (key == NULL || value == NULL) {
 		free(key);
 		free(value);
