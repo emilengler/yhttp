@@ -431,7 +431,7 @@ yhttp_dispatch(struct yhttp *yh, void (*cb)(struct yhttp_requ *, void *),
 
 	yh->is_dispatched = 0;
 
-	return (YHTTP_OK);
+	return (rc);
 }
 
 int
