@@ -264,22 +264,39 @@ static int
 parser_rline_target(struct parser *parser, const char *s, size_t ns)
 {
 	const char	*query;
+	size_t		 pathlen, querylen;
 	int		 rc;
 
 	query = memchr(s, '?', ns);
-	if (query == NULL || query + 1 == s + ns) {
-		/* No query string is present. */
-		if (query == NULL)
-			return (parser_rline_path(parser, s, ns));
-		else
-			return (parser_rline_path(parser, s, ns - 1));
+
+	if (query == NULL) {
+		/* No '?' found. */
+		pathlen = ns;
+		querylen = 0;
+	} else if (query + 1 == s + ns) {
+		/* '?' found but it is the last character. */
+		pathlen = ns - 1;
+		querylen = 0;
 	} else {
-		rc = parser_rline_path(parser, s, query - s);
-		if (rc != YHTTP_OK || parser->err)
-			return (rc);
-		return (parser_rline_query(parser, query + 1,
-					   ns - (query - s) - 1));
+		/* '?' found and a query is present. */
+		pathlen = query - s;
+		/*
+		 * The querylen is being composed by calculating the length of
+		 * the string from the questionmark up until the end of the
+		 * string.  The -1 is necessary because the questionmark itself
+		 * should not be a part of the query value.
+		 */
+		querylen = ns - (query - s) - 1;
 	}
+
+	rc = parser_rline_path(parser, s, pathlen);
+	if (rc != YHTTP_OK || parser->err)
+		return (rc);
+
+	if (querylen != 0)
+		rc = parser_rline_query(parser, query + 1, querylen);
+
+	return (rc);
 }
 
 static int
