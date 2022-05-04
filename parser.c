@@ -369,6 +369,7 @@ parser_header_field(struct parser *parser, const char *s, size_t ns)
 	struct yhttp_requ_internal	*internal;
 	const char			*colon, *p;
 	char				*name, *value;
+	size_t				 namelen, valuelen;
 	int				 rc;
 
 	/* TODO: Trim the OWS. */
@@ -376,7 +377,11 @@ parser_header_field(struct parser *parser, const char *s, size_t ns)
 	if ((colon = memchr(s, ':', ns)) == NULL)
 		goto malformatted;
 
-	/* Validate the general structure. */
+	/*
+	 * Validate the general structure, by checking if the colon is at the
+	 * correct position (not the start), followed by a space and has a value
+	 * after that space.
+	 */
 	if (colon == s || colon + 2 >= s + ns || colon[1] != ' ')
 		goto malformatted;
 
@@ -392,11 +397,18 @@ parser_header_field(struct parser *parser, const char *s, size_t ns)
 	}
 
 	/* Extract the field-name and convert it to lower-case. */
-	if ((name = strndup(s, colon - s)) == NULL)
+	namelen = colon - s;
+	if ((name = strndup(s, namelen)) == NULL)
 		return (YHTTP_ERRNO);
 
 	/* Extract the field-value. */
-	if ((value = strndup(colon + 2, ns - (colon - s) - 2)) == NULL) {
+	/*
+	 * The valuelen is being composed by calculating the length of the
+	 * length of the string from two characters after the colon up until the
+	 * end of the string.
+	 */
+	valuelen = ns - (colon - s) - 2;
+	if ((value = strndup(colon + 2, valuelen)) == NULL) {
 		free(name);
 		return (YHTTP_ERRNO);
 	}
