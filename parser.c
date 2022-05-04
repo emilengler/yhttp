@@ -221,10 +221,11 @@ parser_rline_method(struct parser *parser, const char *s, size_t ns)
 static int
 parser_rline_path(struct parser *parser, const char *s, size_t ns)
 {
-	size_t	i;
+	size_t	i, remaining;
 
 	/* Validate the path. */
-	if (s == 0 || s[0] != '/')
+	/* The first character must be a slash. */
+	if (s == 0 || *s != '/')
 		goto malformatted;
 	for (i = 1; i < ns; ++i) {
 		if (s[i] == '/') {
@@ -232,8 +233,9 @@ parser_rline_path(struct parser *parser, const char *s, size_t ns)
 			if (s[i - 1] == '/')
 				goto malformatted;
 		} else {
+			remaining = ns - i;
 			if (!(abnf_is_unreserved(s[i]) ||
-			      abnf_is_pct_encoded(s + i, ns - i) ||
+			      abnf_is_pct_encoded(s + i, remaining) ||
 			      abnf_is_sub_delims(s[i]) ||
 			      s[i] == ':' || s[i] == '@'))
 				goto malformatted;
