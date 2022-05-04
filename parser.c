@@ -94,13 +94,14 @@ parser_query(struct parser *parser, struct hash *ht[], const char *s,
 	     size_t ns)
 {
 	const char	*start, *end;
-	size_t		 i;
+	size_t		 i, remaining, len;
 	int		 rc;
 
 	/* Validate the query string. */
 	for (i = 0; i < ns; ++i) {
+		remaining = ns - i;
 		if (!(abnf_is_unreserved(s[i]) ||
-		      abnf_is_pct_encoded(s + i, ns - i) ||
+		      abnf_is_pct_encoded(s + i, remaining) ||
 		      abnf_is_sub_delims(s[i]) ||
 		      s[i] == ':' || s[i] == '@' || s[i] == '/' ||
 		      s[i] == '?'))
@@ -111,7 +112,8 @@ parser_query(struct parser *parser, struct hash *ht[], const char *s,
 	start = s;
 	do {
 		/* Find the end of the key/value pair. */
-		end = memchr(start, '&', ns - (start - s));
+		remaining = ns - (start - s);
+		end = memchr(start, '&', remaining);
 		if (end == NULL) {
 			/* The last key/value pair. */
 			end = s + ns;
@@ -122,7 +124,8 @@ parser_query(struct parser *parser, struct hash *ht[], const char *s,
 			continue;
 		}
 
-		rc = parser_keyvalue(parser, ht, start, end - start);
+		len = end - start;
+		rc = parser_keyvalue(parser, ht, start, len);
 		if (rc != YHTTP_OK || parser->err)
 			return (rc);
 
