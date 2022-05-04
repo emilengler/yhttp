@@ -439,7 +439,7 @@ static int
 parser_headers(struct parser *parser)
 {
 	unsigned char	*sol, *eol;
-	size_t		 remaining;
+	size_t		 remaining, linelen;
 	int		 rc;
 
 	if (parser->buf.used == 0)
@@ -448,6 +448,11 @@ parser_headers(struct parser *parser)
 	/* Parse the header fields line by line. */
 	sol = parser->buf.buf;
 	do {
+		/*
+		 * The remaining value is being composed by subtracting the
+		 * amount of already parsed data from the amount of the totally
+		 * available data.
+		 */
 		remaining = parser->buf.used - (sol - parser->buf.buf);
 		eol = parser_find_eol(sol, remaining);
 		if (eol == NULL)
@@ -457,7 +462,8 @@ parser_headers(struct parser *parser)
 		if (memchr(sol, '\0', eol - sol) != NULL)
 			goto malformatted;
 
-		rc = parser_header_field(parser, (char *)sol, eol - sol);
+		linelen = eol - sol;
+		rc = parser_header_field(parser, (char *)sol, linelen);
 		if (rc != YHTTP_OK || parser->err)
 			return (rc);
 
@@ -486,8 +492,6 @@ parser_headers(struct parser *parser)
 		return (buf_pop(&parser->buf, (sol - parser->buf.buf) + 2));
 	else
 		return (buf_pop(&parser->buf, (sol - parser->buf.buf) + 1));
-
-	return (YHTTP_OK);
 malformatted:
 	parser->err = 400;
 	return (YHTTP_OK);
