@@ -51,6 +51,8 @@ struct poll_data {
 	size_t		  used;
 };
 
+static int	net_finish_requ(struct poll_data *, size_t);
+
 static int	net_handle_accept(struct poll_data *, size_t);
 static int	net_handle_client(struct poll_data *, size_t,
 				  void (*)(struct yhttp_requ *, void *),
@@ -64,6 +66,23 @@ static int	net_poll_add(struct poll_data *, int, short);
 static void	net_poll_del(struct poll_data *, size_t);
 static void	net_poll_close(struct poll_data *, size_t);
 static int	net_socket(int, uint16_t);
+
+static int
+net_finish_requ(struct poll_data *pd, size_t index)
+{
+	if (net_is_keep_alive(pd->parsers[index]->requ)) {
+		/* Connection is keep-alive, just reset it. */
+		parser_free(pd->parsers[index]);
+
+		if ((pd->parsers[index] = parser_init()) == NULL)
+			return (YHTTP_ERRNO);
+		return (YHTTP_OK);
+	} else {
+		/* Connection is close, close it. */
+		net_poll_close(pd, index);
+		return (YHTTP_OK);
+	}
+}
 
 static int
 net_handle_accept(struct poll_data *pd, size_t index)
@@ -110,13 +129,13 @@ net_handle_client(struct poll_data *pd, size_t index,
 		if (pd->parsers[index]->err) {
 			if (resp_err(s, pd->parsers[index]->err) != YHTTP_OK)
 				net_poll_close(pd, index);
-			/* TODO: Respect the Connection header field. */
+			return (net_finish_requ(pd, index));
 		} else if (pd->parsers[index]->state == PARSER_DONE) {
 			internal = pd->parsers[index]->requ->internal;
 			cb(pd->parsers[index]->requ, udata);
 			if (resp(s, internal->resp) != YHTTP_OK)
 				net_poll_close(pd, index);
-			/* TODO: Respect the Connection header field. */
+			return (net_finish_requ(pd, index));
 		}
 	}
 
