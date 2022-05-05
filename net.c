@@ -58,8 +58,7 @@ static int	 net_handle_accept(struct poll_data *, size_t);
 static int	 net_handle_client(struct poll_data *, size_t,
 				   void (*)(struct yhttp_requ *, void *),
 				   void *);
-static char	*net_ip4(int);
-static char	*net_ip6(int);
+static char	*net_ip(int);
 static int	 net_is_keep_alive(struct yhttp_requ *);
 static int	 net_nonblock(int);
 static void	 net_poll_init(struct poll_data *);
@@ -146,55 +145,36 @@ net_handle_client(struct poll_data *pd, size_t index,
 }
 
 static char *
-net_ip4(int s)
+net_ip(int s)
 {
 	char			*str;
-	struct sockaddr_in	 sa4;
+	void			*addr;
+	struct sockaddr_storage	 sa;
 	socklen_t		 nsa;
+	int			 af;
 
-	/* Get the connection info. */
-	nsa = sizeof(sa4);
-	if (getpeername(s, (struct sockaddr *)&sa4, &nsa) == -1)
+	/* Obtain the address information and socket domain. */
+	nsa = sizeof(sa);
+	if (getpeername(s, (struct sockaddr *)&sa, &nsa) == -1)
 		return (NULL);
-
-	if ((str = malloc(INET_ADDRSTRLEN)) == NULL)
-		return (NULL);
-	memset(str, '\0', INET_ADDRSTRLEN);
-
-	/* Convert the IP from network to presentation format. */
-	if (inet_ntop(AF_INET, &sa4.sin_addr, str, INET_ADDRSTRLEN) == NULL)
-		goto err;
-
-	return (str);
-err:
-	free(str);
-	return (NULL);
-}
-
-static char *
-net_ip6(int s)
-{
-	char			*str;
-	struct sockaddr_in6	 sa6;
-	socklen_t		 nsa;
-
-	/* Get the connection info. */
-	nsa = sizeof(sa6);
-	if (getpeername(s, (struct sockaddr *)&sa6, &nsa) == -1)
-		return (NULL);
+	af = sa.ss_family;
 
 	if ((str = malloc(INET6_ADDRSTRLEN)) == NULL)
 		return (NULL);
 	memset(str, '\0', INET6_ADDRSTRLEN);
 
-	/* Convert the IP from network to presentation format. */
-	if (inet_ntop(AF_INET6, &sa6.sin6_addr, str, INET6_ADDRSTRLEN) == NULL)
-		goto err;
+	assert(af == AF_INET || af == AF_INET6);
+	if (af == AF_INET)
+		addr = &(((struct sockaddr_in *)&sa)->sin_addr);
+	else if (af == AF_INET6)
+		addr = &(((struct sockaddr_in6 *)&sa)->sin6_addr);
+
+	if (inet_ntop(af, addr, str, INET6_ADDRSTRLEN) == NULL) {
+		free(str);
+		return (NULL);
+	}
 
 	return (str);
-err:
-	free(str);
-	return (NULL);
 }
 
 static int
