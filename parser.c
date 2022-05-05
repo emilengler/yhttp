@@ -442,19 +442,16 @@ malformatted:
 static int
 parser_headers(struct parser *parser)
 {
-	unsigned char	*sol, *eol;
+	unsigned char	*sol, *eol, *eoh;
 	size_t		 remaining, parsed, linelen;
 	int		 rc;
 
 	if (parser->buf.used == 0)
 		return (YHTTP_OK);
 
-	/* Parse the header fields line by line, until the empty line. */
 	/*
-	 * TODO: This is a critical bug, because it makes the parsing of the
-	 * header impossible, if it has not been received in one TCP frame.
-	 * Fix this, by for example making stronger use of buf_pop() or
-	 * store sol in struct parser.
+	 * Check if the header has been fully received, by traversing all
+	 * lines, until the empty line has been found.
 	 */
 	sol = parser->buf.buf;
 	while (1) {
@@ -467,7 +464,7 @@ parser_headers(struct parser *parser)
 		eol = parser_find_eol(sol, remaining);
 		if (eol == NULL) {
 			/*
-			 * No eol means, that the line has not been fully
+			 * No eol means that the line has not been fully
 			 * received yet.  Wait for more input.
 			 */
 			return (YHTTP_OK);
@@ -476,8 +473,20 @@ parser_headers(struct parser *parser)
 			 * We have reached the empty line, meaning that the end
 			 * of the header has been reached.
 			 */
+			eoh = eol;
 			break;
 		}
+
+		/* Go to the next line. */
+		sol = eol + (*eol == '\r' ? 2 : 1);
+	}
+
+	/* As we have the end of the header now, parse all lines. */
+	sol = parser->buf.buf;
+	while (sol != eoh) {
+		remaining = parser->buf.used - (sol - parser->buf.buf);
+		eol = parser_find_eol(sol, remaining);
+		assert(eol != NULL);
 		linelen = eol - sol;
 
 		/* Check for ASCII '\0'. */
@@ -489,10 +498,7 @@ parser_headers(struct parser *parser)
 			return (rc);
 
 		/* Go to the next line. */
-		if (*eol == '\r')
-			sol = eol + 2;
-		else
-			sol = eol + 1;
+		sol = eol + (*eol == '\r' ? 2 : 1);
 	}
 
 	/*
