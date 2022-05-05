@@ -108,6 +108,7 @@ net_handle_client(struct poll_data *pd, size_t index,
 		  void (*cb)(struct yhttp_requ *, void *), void *udata)
 {
 	struct yhttp_requ_internal	*internal;
+	char				*client_ip;
 	unsigned char			 msg[4096];
 	size_t				 n;
 	int				 rc, s;
@@ -133,6 +134,11 @@ net_handle_client(struct poll_data *pd, size_t index,
 				net_poll_close(pd, index);
 			return (net_finish_requ(pd, index));
 		} else if (pd->parsers[index]->state == PARSER_DONE) {
+			/* Obtain the IP address. */
+			if ((client_ip = net_ip(s)) == NULL)
+				return (YHTTP_ERRNO);
+			pd->parsers[index]->requ->client_ip = client_ip;
+
 			internal = pd->parsers[index]->requ->internal;
 			cb(pd->parsers[index]->requ, udata);
 			if (resp(s, internal->resp) != YHTTP_OK)
