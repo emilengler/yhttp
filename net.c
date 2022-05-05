@@ -18,6 +18,7 @@
 #include <sys/socket.h>
 
 #include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include <assert.h>
 #include <errno.h>
@@ -51,21 +52,23 @@ struct poll_data {
 	size_t		  used;
 };
 
-static int	net_finish_requ(struct poll_data *, size_t);
+static int	 net_finish_requ(struct poll_data *, size_t);
 
-static int	net_handle_accept(struct poll_data *, size_t);
-static int	net_handle_client(struct poll_data *, size_t,
-				  void (*)(struct yhttp_requ *, void *),
-				  void *);
-static int	net_is_keep_alive(struct yhttp_requ *);
-static int	net_nonblock(int);
-static void	net_poll_init(struct poll_data *);
-static void	net_poll_free(struct poll_data *);
-static int	net_poll_grow(struct poll_data *);
-static int	net_poll_add(struct poll_data *, int, short);
-static void	net_poll_del(struct poll_data *, size_t);
-static void	net_poll_close(struct poll_data *, size_t);
-static int	net_socket(int, uint16_t);
+static int	 net_handle_accept(struct poll_data *, size_t);
+static int	 net_handle_client(struct poll_data *, size_t,
+				   void (*)(struct yhttp_requ *, void *),
+				   void *);
+static char	*net_ip4(int);
+static char	*net_ip6(int);
+static int	 net_is_keep_alive(struct yhttp_requ *);
+static int	 net_nonblock(int);
+static void	 net_poll_init(struct poll_data *);
+static void	 net_poll_free(struct poll_data *);
+static int	 net_poll_grow(struct poll_data *);
+static int	 net_poll_add(struct poll_data *, int, short);
+static void	 net_poll_del(struct poll_data *, size_t);
+static void	 net_poll_close(struct poll_data *, size_t);
+static int	 net_socket(int, uint16_t);
 
 static int
 net_finish_requ(struct poll_data *pd, size_t index)
@@ -140,6 +143,58 @@ net_handle_client(struct poll_data *pd, size_t index,
 	}
 
 	return (YHTTP_OK);
+}
+
+static char *
+net_ip4(int s)
+{
+	char			*str;
+	struct sockaddr_in	 sa4;
+	socklen_t		 nsa;
+
+	/* Get the connection info. */
+	nsa = sizeof(sa4);
+	if (getpeername(s, (struct sockaddr *)&sa4, &nsa) == -1)
+		return (NULL);
+
+	if ((str = malloc(INET_ADDRSTRLEN)) == NULL)
+		return (NULL);
+	memset(str, '\0', INET_ADDRSTRLEN);
+
+	/* Convert the IP from network to presentation format. */
+	if (inet_ntop(AF_INET, &sa4.sin_addr, str, INET_ADDRSTRLEN) == NULL)
+		goto err;
+
+	return (str);
+err:
+	free(str);
+	return (NULL);
+}
+
+static char *
+net_ip6(int s)
+{
+	char			*str;
+	struct sockaddr_in6	 sa6;
+	socklen_t		 nsa;
+
+	/* Get the connection info. */
+	nsa = sizeof(sa6);
+	if (getpeername(s, (struct sockaddr *)&sa6, &nsa) == -1)
+		return (NULL);
+
+	if ((str = malloc(INET6_ADDRSTRLEN)) == NULL)
+		return (NULL);
+	memset(str, '\0', INET6_ADDRSTRLEN);
+
+	/* Convert the IP from network to presentation format. */
+	if (inet_ntop(AF_INET6, &sa6.sin6_addr, str, INET6_ADDRSTRLEN) == NULL)
+		goto err;
+
+	return (str);
+err:
+	free(str);
+	return (NULL);
 }
 
 static int
