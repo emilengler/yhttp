@@ -450,6 +450,12 @@ parser_headers(struct parser *parser)
 		return (YHTTP_OK);
 
 	/* Parse the header fields line by line, until the empty line. */
+	/*
+	 * TODO: This is a critical bug, because it makes the parsing of the
+	 * header impossible, if it has not been received in one TCP frame.
+	 * Fix this, by for example making stronger use of buf_pop() or
+	 * store sol in struct parser.
+	 */
 	sol = parser->buf.buf;
 	while (1) {
 		/*
