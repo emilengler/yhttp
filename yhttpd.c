@@ -15,8 +15,10 @@
  */
 
 #include <sys/types.h>
+#include <sys/stat.h>
 
 #include <err.h>
+#include <pwd.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -28,10 +30,12 @@
 static struct yhttp	*yh = NULL;
 
 static void		parse_args(int, char *[]);
+static void		sandbox(void);
 static void		sighdlr(int);
 static __dead void	usage(void);
 static void		yhttp_cb(struct yhttp_requ *, void *);
 
+static char		*directory = NULL;
 static int		 virtual_hosts = 0;
 static uint16_t		 port = 8080;
 
@@ -63,6 +67,41 @@ parse_args(int argc, char *argv[])
 		/* DIRECTORY not supplied. */
 		usage();
 	}
+	directory = argv[optind];
+}
+
+static void
+sandbox(void)
+{
+	struct passwd	*pw;
+	struct stat	 st;
+
+	/*
+	 * Obtain the uid of the owner of directory, because we will setuid()
+	 * to it afterwards.
+	 */
+	if (stat(directory, &st) == -1)
+		err(1, "stat %s", directory);
+	if (st.st_uid == 0)
+		errx(1, "%s cannot be owned by root", directory);
+
+	/* Obtain the gid of the uid. */
+	if ((pw = getpwuid(st.st_uid)) == NULL)
+		err(1, "getpwuid %d", st.st_uid);
+
+	if (chroot(directory) == -1)
+		err(1, "chroot %s", directory);
+
+	/* Drop the privileges. */
+	if (setgroups(1, &pw->pw_gid) == -1 ||
+	    setresgid(pw->pw_gid, pw->pw_gid, pw->pw_gid) == -1 ||
+	    setresuid(pw->pw_uid, pw->pw_uid, pw->pw_uid) == -1)
+		err(1, "cannot drop root privileges");
+
+#ifdef __OpenBSD__
+	if (pledge("stdio inet rpath", "") == -1)
+		err(1, "pledge");
+#endif
 }
 
 static void
@@ -91,8 +130,12 @@ main(int argc, char *argv[])
 {
 	int	rc;
 
-	parse_args(argc, argv);
+	if (geteuid() != 0)
+		errx(1, "need root privileges");
 
+	/* Setup the process. */
+	parse_args(argc, argv);
+	sandbox();
 	signal(SIGINT, sighdlr);
 	signal(SIGTERM, sighdlr);
 
