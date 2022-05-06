@@ -18,25 +18,86 @@
 #include <sys/stat.h>
 
 #include <err.h>
+#include <errno.h>
 #include <pwd.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "yhttp.h"
 
+#define MAX_FS	1000 * 1000 * 512	/* 512 MB */
+
+struct mime_type {
+	const char	*ext;
+	const char	*type;
+};
+
+static const char	*get_content_type(const char *);
+static long		 get_file_sz(FILE *);
+static void		 parse_args(int, char *[]);
+static void		 sandbox(void);
+static void		 sighdlr(int);
+static __dead void	 usage(void);
+static void		 yhttp_cb(struct yhttp_requ *, void *);
+
+static const struct mime_type	types[] = {
+	{ "html", "text/html" },
+	{ "htm", "text/html" },
+	{ "css", "text/css" },
+	{ "txt", "text/plain" },
+
+	{ "gif", "image/gif" },
+	{ "jpg", "image/jpeg" },
+	{ "jpeg", "image/jpeg" },
+	{ "png", "image/png" },
+	{ "pdf", "application/pdf" },
+
+	{ NULL, "application/octet-stream" }
+};
+
 static struct yhttp	*yh = NULL;
-
-static void		parse_args(int, char *[]);
-static void		sandbox(void);
-static void		sighdlr(int);
-static __dead void	usage(void);
-static void		yhttp_cb(struct yhttp_requ *, void *);
-
 static char		*directory = NULL;
 static uint16_t		 port = 8080;
+
+static const char *
+get_content_type(const char *path)
+{
+	const char	*ext;
+	size_t		 i, len;
+
+	/* Find the last dot. */
+	len = strlen(path);
+	for (i = len - 1; i != 0; --i) {
+		if (path[i] == '.')
+			break;
+	}
+	if (path[i] != '.')
+		return ("application/octet-stream");
+	ext = path + i + 1;
+
+	for (i = 0; types[i].ext != NULL; ++i) {
+		if (strcasecmp(ext, types[i].ext) == 0)
+			break;
+	}
+
+	return (types[i].type);
+}
+
+static long
+get_file_sz(FILE *fp)
+{
+	long	sz;
+
+	fseek(fp, 0L, SEEK_END);
+	sz = ftell(fp);
+	fseek(fp, 0L, SEEK_SET);
+
+	return (sz);
+}
 
 static void
 parse_args(int argc, char *argv[])
@@ -119,6 +180,85 @@ usage(void)
 static void
 yhttp_cb(struct yhttp_requ *requ, void *udata)
 {
+	const char	*path, *body, *content_type;
+	unsigned char	*buf;
+	FILE		*fp;
+	long		 fsize;
+	int		 status;
+
+	/* Support for index. */
+	if (strcmp(requ->path, "/") == 0)
+		path = "/index.html";
+	else
+		path = requ->path;
+
+	/* Prepare the response. */
+	status = 200;
+	content_type = get_content_type(path);
+
+	/* Open the file. */
+	if ((fp = fopen(path, "r")) == NULL) {
+		switch (errno) {
+		case ENOTDIR:	/* FALLTHROUGH */
+		case ENOENT:
+			status = 404;	/* Not Found */
+			break;
+		case EISDIR:	/* FALLTHROUGH */
+		case EACCES:
+			status = 403;	/* Forbidden */
+			break;
+		default:
+			status = 500;	/* Internal Server Error */
+			break;
+		}
+		goto end;
+	}
+
+	/* Check the file size. */
+	fsize = get_file_sz(fp);
+	if (fsize == -1 || fsize > MAX_FS) {
+		fclose(fp);
+		status = 500;
+		goto end;
+	}
+
+	/* Read the file into a temporary buffer. */
+	if ((buf = malloc(fsize)) == NULL) {
+		fclose(fp);
+		status = 500;
+		goto end;
+	}
+	fread(buf, fsize, 1, fp);
+	fclose(fp);
+
+	/* Make it the message body. */
+	if (yhttp_resp_body(requ, buf, fsize) != YHTTP_OK) {
+		free(buf);
+		status = 500;
+		goto end;
+	}
+	free(buf);
+
+end:
+	yhttp_resp_status(requ, status);
+	if (status == 200)
+		yhttp_resp_header(requ, "Content-Type", content_type);
+	else {
+		switch (status) {
+		case 403:
+			body = "<h1>403 Forbidden</h1>";
+			break;
+		case 404:
+			body = "<h1>404 Not Found</h1>";
+			break;
+		case 500:
+			body = "<h1>500 Internal Server Error</h1>";
+			break;
+		}
+		yhttp_resp_header(requ, "Content-Type", "text/html");
+		yhttp_resp_body(requ, (const unsigned char *)body,
+				strlen(body));
+	}
 }
 
 int
