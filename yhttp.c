@@ -364,7 +364,7 @@ yhttp_resp_header(struct yhttp_requ *requ, const char *name, const char *value)
 
 		/* Validate value. */
 		for (i = 0; value[i] != '\0'; ++i) {
-			if (!abnf_is_tchar(value[i]))
+			if (!isprint(value[i]))
 				return (YHTTP_EINVAL);
 		}
 
