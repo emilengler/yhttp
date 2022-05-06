@@ -130,10 +130,9 @@ net_handle_client(struct poll_data *pd, size_t index,
 		}
 
 		if (pd->parsers[index]->err) {
-			rc = resp_err(s, pd->parsers[index]->err);
-			if (rc != YHTTP_OK) {
+			if (resp_err(s, pd->parsers[index]->err) != YHTTP_OK) {
 				net_poll_close(pd, index);
-				return (rc);
+				return (YHTTP_OK);
 			}
 			return (net_finish_requ(pd, index));
 		} else if (pd->parsers[index]->state == PARSER_DONE) {
@@ -144,10 +143,9 @@ net_handle_client(struct poll_data *pd, size_t index,
 
 			internal = pd->parsers[index]->requ->internal;
 			cb(pd->parsers[index]->requ, udata);
-			rc = resp(s, internal->resp);
-			if (rc != YHTTP_OK) {
+			if (resp(s, internal->resp) != YHTTP_OK) {
 				net_poll_close(pd, index);
-				return (rc);
+				return (YHTTP_OK);
 			}
 			return (net_finish_requ(pd, index));
 		}
