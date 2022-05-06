@@ -36,7 +36,6 @@ static __dead void	usage(void);
 static void		yhttp_cb(struct yhttp_requ *, void *);
 
 static char		*directory = NULL;
-static int		 virtual_hosts = 0;
 static uint16_t		 port = 8080;
 
 static void
@@ -47,9 +46,6 @@ parse_args(int argc, char *argv[])
 	/* Parse the command line arguments. */
 	while ((ch = getopt(argc, argv, "hp:")) != -1) {
 		switch (ch) {
-		case 'h':
-			virtual_hosts = 1;
-			break;
 		case 'p':
 			port_arg = atoi(optarg);
 			if (port_arg < 1024)
@@ -117,7 +113,7 @@ sighdlr(int sig)
 static __dead void
 usage(void)
 {
-	errx(1, "[-h] [-p PORT] DIRECTORY");
+	errx(1, "[-p PORT] DIRECTORY");
 }
 
 static void
