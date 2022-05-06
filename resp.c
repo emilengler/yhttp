@@ -219,6 +219,11 @@ resp_transmit_body(int s, struct yhttp_resp *resp)
 {
 	ssize_t	n;
 
+	if (resp->nbody == 0) {
+		/* Do nothing if no body was set. */
+		return (YHTTP_OK);
+	}
+
 	n = net_send(s, resp->body, resp->nbody);
 	if (n <= 0 || (size_t)n != resp->nbody)
 		return (YHTTP_ERRNO);
