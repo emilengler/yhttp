@@ -470,8 +470,13 @@ net_send(int s, const unsigned char *data, size_t ndata)
 	sent = 0;
 	do {
 		n = send(s, data + sent, ndata - sent, 0);
-		if (n <= 0)
+		if (n <= 0) {
+			if (n == -1) {
+				if (errno == EAGAIN)
+					continue;
+			}
 			return (n);
+		}
 
 		/* Integer overflow check. */
 		if (SIZE_MAX - (size_t)n < sent)
