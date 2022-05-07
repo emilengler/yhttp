@@ -110,14 +110,14 @@ net_handle_client(struct poll_data *pd, size_t index,
 	struct yhttp_requ_internal	*internal;
 	char				*client_ip;
 	unsigned char			 msg[4096];
-	size_t				 n;
+	ssize_t				 n;
 	int				 rc, s;
 
 	s = pd->pfds[index].fd;
 
 	n = recv(s, msg, sizeof(msg), 0);
 	if (n <= 0) {
-		if (n < 0 && errno == EAGAIN)
+		if (n == -1 && (errno == EAGAIN || errno == EINTR))
 			return (YHTTP_OK);
 
 		/* Connection was closed or error occurred. */
@@ -471,10 +471,8 @@ net_send(int s, const unsigned char *data, size_t ndata)
 	do {
 		n = send(s, data + sent, ndata - sent, 0);
 		if (n <= 0) {
-			if (n == -1) {
-				if (errno == EAGAIN)
-					continue;
-			}
+			if (n == -1 && (errno == EAGAIN || errno == EINTR))
+				continue;
 			return (n);
 		}
 
