@@ -30,6 +30,10 @@
 #include "yhttp-internal.h"
 #include "net.h"
 
+/*
+ * Functions from yhttp.h.
+ */
+
 struct yhttp *
 yhttp_init(uint16_t port)
 {
@@ -89,107 +93,6 @@ yhttp_query(struct yhttp_requ *requ, const char *key)
 		return (node->value);
 }
 
-struct yhttp_requ *
-yhttp_requ_init(void)
-{
-	struct yhttp_requ_internal	*internal;
-	struct yhttp_requ		*requ;
-
-	if ((requ = malloc(sizeof(struct yhttp_requ))) == NULL)
-		return (NULL);
-
-	requ->path = NULL;
-	requ->client_ip = NULL;
-
-	/*
-	 * The request body will be stored inside the buffer of the parser
-	 * rather than in a separately allocated space, meaning the clean-up
-	 * is not in our scope.
-	 */
-	requ->body = NULL;
-	requ->nbody = 0;
-
-	requ->method = YHTTP_GET;
-
-	/* Initialize the internal field. */
-	if ((internal = malloc(sizeof(struct yhttp_requ_internal))) == NULL)
-		goto err;
-	requ->internal = internal;
-
-	internal->headers = NULL;
-	internal->queries = NULL;
-	internal->resp = NULL;
-
-	if ((internal->headers = hash_init()) == NULL)
-		goto err;
-	if ((internal->queries = hash_init()) == NULL)
-		goto err;
-	if ((internal->resp = yhttp_resp_init()) == NULL)
-		goto err;
-
-	return (requ);
-err:
-	free(requ);
-	if (internal != NULL) {
-		hash_free(internal->headers);
-		hash_free(internal->queries);
-		yhttp_resp_free(internal->resp);
-		free(internal);
-	}
-	return (NULL);
-}
-
-void
-yhttp_requ_free(struct yhttp_requ *requ)
-{
-	struct yhttp_requ_internal	*internal;
-
-	if (requ == NULL)
-		return;
-
-	internal = requ->internal;
-
-	/* See the comment regarding requ->body inside yhttp_requ_init(). */
-	free(requ->path);
-	free(requ->client_ip);
-	free(requ);
-
-	hash_free(internal->headers);
-	hash_free(internal->queries);
-	yhttp_resp_free(internal->resp);
-	free(internal);
-}
-
-struct yhttp_resp *
-yhttp_resp_init(void)
-{
-	struct yhttp_resp	*resp;
-
-	if ((resp = malloc(sizeof(struct yhttp_resp))) == NULL)
-		return (NULL);
-
-	if ((resp->headers = hash_init()) == NULL) {
-		free(resp);
-		return (NULL);
-	}
-
-	resp->body = NULL;
-	resp->nbody = 0;
-	resp->status = 200;
-
-	return (resp);
-}
-
-void
-yhttp_resp_free(struct yhttp_resp *resp)
-{
-	if (resp == NULL)
-		return;
-
-	hash_free(resp->headers);
-	free(resp->body);
-	free(resp);
-}
 
 /*
  * The following function is largely based upon kcgi(3)s khttp_urlencode(),
@@ -447,4 +350,110 @@ yhttp_stop(struct yhttp *yh)
 	yh->pipe[1] = -1;
 
 	return (YHTTP_OK);
+}
+
+/*
+ * Functions from yhttp-internal.h.
+ */
+
+struct yhttp_requ *
+yhttp_requ_init(void)
+{
+	struct yhttp_requ_internal	*internal;
+	struct yhttp_requ		*requ;
+
+	if ((requ = malloc(sizeof(struct yhttp_requ))) == NULL)
+		return (NULL);
+
+	requ->path = NULL;
+	requ->client_ip = NULL;
+
+	/*
+	 * The request body will be stored inside the buffer of the parser
+	 * rather than in a separately allocated space, meaning the clean-up
+	 * is not in our scope.
+	 */
+	requ->body = NULL;
+	requ->nbody = 0;
+
+	requ->method = YHTTP_GET;
+
+	/* Initialize the internal field. */
+	if ((internal = malloc(sizeof(struct yhttp_requ_internal))) == NULL)
+		goto err;
+	requ->internal = internal;
+
+	internal->headers = NULL;
+	internal->queries = NULL;
+	internal->resp = NULL;
+
+	if ((internal->headers = hash_init()) == NULL)
+		goto err;
+	if ((internal->queries = hash_init()) == NULL)
+		goto err;
+	if ((internal->resp = yhttp_resp_init()) == NULL)
+		goto err;
+
+	return (requ);
+err:
+	free(requ);
+	if (internal != NULL) {
+		hash_free(internal->headers);
+		hash_free(internal->queries);
+		yhttp_resp_free(internal->resp);
+		free(internal);
+	}
+	return (NULL);
+}
+
+void
+yhttp_requ_free(struct yhttp_requ *requ)
+{
+	struct yhttp_requ_internal	*internal;
+
+	if (requ == NULL)
+		return;
+
+	internal = requ->internal;
+
+	/* See the comment regarding requ->body inside yhttp_requ_init(). */
+	free(requ->path);
+	free(requ->client_ip);
+	free(requ);
+
+	hash_free(internal->headers);
+	hash_free(internal->queries);
+	yhttp_resp_free(internal->resp);
+	free(internal);
+}
+
+struct yhttp_resp *
+yhttp_resp_init(void)
+{
+	struct yhttp_resp	*resp;
+
+	if ((resp = malloc(sizeof(struct yhttp_resp))) == NULL)
+		return (NULL);
+
+	if ((resp->headers = hash_init()) == NULL) {
+		free(resp);
+		return (NULL);
+	}
+
+	resp->body = NULL;
+	resp->nbody = 0;
+	resp->status = 200;
+
+	return (resp);
+}
+
+void
+yhttp_resp_free(struct yhttp_resp *resp)
+{
+	if (resp == NULL)
+		return;
+
+	hash_free(resp->headers);
+	free(resp->body);
+	free(resp);
 }
